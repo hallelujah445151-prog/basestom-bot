@@ -1,4 +1,4 @@
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CallbackQueryHandler, MessageHandler, filters
 import sys
 import os
@@ -85,6 +85,6 @@ async def role_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 change_role_handler = CallbackQueryHandler(
-    lambda c: c.data and c.data.startswith(('role_dispatcher_', 'role_technician_', 'role_doctor_', 'role_cancel_')),
-    role_selected
+    role_selected,
+    lambda c: c.data and c.data.startswith(('role_dispatcher_', 'role_technician_', 'role_doctor_', 'role_cancel_'))
 )
