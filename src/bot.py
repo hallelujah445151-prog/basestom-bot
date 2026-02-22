@@ -10,6 +10,7 @@ from handlers.registration import register_handler, register_start
 from handlers.admin import admin_menu, admin_menu_handler, get_admin_handler
 from handlers.orders import new_order_start, new_order_handler
 from handlers.reports import report_doctors, report_technicians, report_work_types, report_period_start, report_period_handler
+from handlers.change_role import change_role_start, change_role_handler
 from utils.reminder_background import run_background_task
 
 load_dotenv()
@@ -32,6 +33,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 /register - Регистрация в системе
 /neworder - Создать новый заказ
 /admin - Админ-панель (для диспетчера)
+/changerole - Сменить роль (для тестирования)
 /report - Отчеты (для диспетчера)
 /help - Справка
 '''
@@ -52,6 +54,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🔹 Общие:
 /start - Начать работу
 /register - Регистрация в системе
+/changerole - Сменить роль (для тестирования)
 /help - Эта справка
 
 🔹 Для диспетчера:
@@ -69,6 +72,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 💡 Отчеты:
 Команды /report_* позволяют просматривать статистику по заказам.
 Команда /report_period позволяет выбрать период для детального отчета.
+
+💡 Тестирование ролей:
+Команда /changerole позволяет сменить роль для тестирования.
+Диспетчер: может создавать заказы, просматривать отчеты, управлять пользователями.
+Техник: получает уведомления о заказах и напоминания.
+Врач: получает уведомления о назначении заказов.
 '''
 
     await update.message.reply_text(help_text)
@@ -87,6 +96,7 @@ async def main_async():
     application.add_handler(CommandHandler('help', help_command))
     application.add_handler(CommandHandler('admin', admin_menu))
     application.add_handler(CommandHandler('neworder', new_order_start))
+    application.add_handler(CommandHandler('changerole', change_role_start))
     application.add_handler(CommandHandler('report_doctors', report_doctors))
     application.add_handler(CommandHandler('report_technicians', report_technicians))
     application.add_handler(CommandHandler('report_work_types', report_work_types))
@@ -95,6 +105,7 @@ async def main_async():
     application.add_handler(register_handler)
     application.add_handler(get_admin_handler())
     application.add_handler(new_order_handler)
+    application.add_handler(change_role_handler)
     application.add_handler(report_period_handler)
 
     application.add_handler(CallbackQueryHandler(admin_menu_handler, pattern='^admin_'))
