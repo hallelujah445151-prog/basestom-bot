@@ -1,0 +1,3 @@
+language = "python3"
+run = "python src/bot.py"
+modules = ["python-3.10:v18-20230507"]
