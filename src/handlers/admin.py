@@ -32,6 +32,12 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def admin_users_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Показать список всех пользователей"""
+    user = UserManager.get_user_by_telegram_id(update.effective_user.id)
+
+    if not user or user['role'] != 'dispatcher':
+        await update.message.reply_text('❌ У вас нет прав для этой команды.')
+        return
+
     query = update.callback_query
     await query.answer()
 
@@ -43,17 +49,17 @@ async def admin_users_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     message = "📋 Список пользователей:\n\n"
 
-    for user in users:
-        status = "✅" if user['is_active'] else "❌"
-        message += f"{status} {user['name']} ({user['role']})\n"
-        message += f"   Telegram ID: {user['telegram_id']}\n"
+    for i, user_data in enumerate(users, 1):
+        status = "✅" if user_data['is_active'] else "❌"
+        message += f"{i}. {status} {user_data['name']} ({user_data['role']})\n"
+        message += f"   Telegram ID: {user_data['telegram_id']}\n"
 
-        if user['reference_id']:
-            message += f"   Привязан к ID: {user['reference_id']}\n"
+        if user_data['reference_id']:
+            message += f"   Привязан к ID: {user_data['reference_id']}\n"
 
         message += "\n"
 
-    keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data="admin_menu")]]
+    keyboard = [[InlineKeyboardButton("🔙 Назад", callback_data='admin_menu')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await query.edit_message_text(message, reply_markup=reply_markup)
@@ -61,18 +67,22 @@ async def admin_users_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def admin_add_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Начало добавления пользователя"""
-    query = update.callback_query
-    await query.answer()
+    user = UserManager.get_user_by_telegram_id(update.effective_user.id)
+
+    if not user or user['role'] != 'dispatcher':
+        await update.message.reply_text('❌ У вас нет прав для этой команды.')
+        return ConversationHandler.END
 
     keyboard = [
-        [InlineKeyboardButton("Техник", callback_data="add_role_technician")],
-        [InlineKeyboardButton("Врач", callback_data="add_role_doctor")],
-        [InlineKeyboardButton("Диспетчер", callback_data="add_role_dispatcher")]
+        [InlineKeyboardButton("Техник", callback_data='add_role_technician')],
+        [InlineKeyboardButton("Врач", callback_data='add_role_doctor')],
+        [InlineKeyboardButton("Диспетчер", callback_data='add_role_dispatcher')],
+        [InlineKeyboardButton("❌ Отмена", callback_data='add_cancel')]
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await query.edit_message_text('➕ Выберите роль нового пользователя:', reply_markup=reply_markup)
+    await update.message.reply_text('➕ Добавить пользователя\n\nВыберите роль:', reply_markup=reply_markup)
 
     return SELECTING_USER_TYPE
 
@@ -82,49 +92,61 @@ async def admin_add_user_role(update: Update, context: ContextTypes.DEFAULT_TYPE
     query = update.callback_query
     await query.answer()
 
-    role = query.data.split('_')[2]
+    data = query.data
+
+    if 'add_cancel' in data:
+        await query.edit_message_text('❌ Добавление отменено.')
+        return ConversationHandler.END
+
+    role = data.split('_')[2]
     context.user_data['add_role'] = role
 
-    await query.edit_message_text(f'✅ Роль: {role}\n📝 Введите ФИО пользователя:')
+    await query.edit_message_text(f'✅ Выбрана роль: {role}\n📝 Введите ФИО пользователя:')
 
     return ENTERING_NAME
 
 
 async def admin_add_user_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Ввод имени при добавлении пользователя"""
+    """Ввод имени пользователя"""
     name = update.message.text
-    context.user_data['add_name'] = name
-
-    await update.message.reply_text(
-        f'✅ Имя: {name}\n'
-        f'📱 Введите Telegram ID пользователя (или пропустите):'
-    )
-
-    return ENTERING_TELEGRAM_ID
-
-
-async def admin_add_user_telegram(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Ввод Telegram ID при добавлении пользователя"""
     role = context.user_data.get('add_role')
-    name = context.user_data.get('add_name')
-
-    telegram_id = None
-    if update.message.text and update.message.text.isdigit():
-        telegram_id = int(update.message.text)
 
     success = UserManager.register_user(
-        telegram_id=telegram_id,
+        telegram_id=None,
         name=name,
-        role=role
+        role=role,
+        reference_id=None
     )
 
     if success:
-        await update.message.reply_text(
-            f'🎉 Пользователь добавлен!\n\n'
-            f'👤 Имя: {name}\n'
-            f'🔹 Роль: {role}\n'
-            f'📱 Telegram ID: {telegram_id or "Не указан"}'
-        )
+        await update.message.reply_text(f'✅ Пользователь добавлен!\n👤 Имя: {name}\n🔹 Роль: {role}')
+    else:
+        await update.message.reply_text('❌ Ошибка добавления пользователя.')
+
+    return ConversationHandler.END
+
+
+async def admin_add_user_telegram_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Ввод Telegram ID пользователя"""
+    telegram_id = update.message.text
+
+    try:
+        telegram_id = int(telegram_id)
+    except ValueError:
+        await update.message.reply_text('❌ Неверный формат Telegram ID. Введите число.')
+        return
+
+    role = context.user_data.get('add_role')
+
+    success = UserManager.register_user(
+        telegram_id=telegram_id,
+        name=context.user_data.get('add_name'),
+        role=role,
+        reference_id=None
+    )
+
+    if success:
+        await update.message.reply_text(f'✅ Пользователь добавлен!\n👤 Имя: {context.user_data.get("add_name")}\n🔹 Роль: {role}\n📱 Telegram ID: {telegram_id}')
     else:
         await update.message.reply_text('❌ Ошибка добавления пользователя.')
 
@@ -154,11 +176,7 @@ async def delete_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text(
-        '🗑️ Удаление пользователя\n\n'
-        'Выберите пользователя для удаления:',
-        reply_markup=reply_markup
-    )
+    await update.message.reply_text('🗑️ Удаление пользователя\n\nВыберите пользователя для удаления:', reply_markup=reply_markup)
 
     return SELECTING_USER_FOR_DELETE
 
@@ -170,11 +188,10 @@ async def delete_user_selected(update: Update, context: ContextTypes.DEFAULT_TYP
 
     data = query.data
 
-    if data == 'delete_cancel':
+    if 'delete_cancel' in data:
         await query.edit_message_text('❌ Удаление отменено.')
         return ConversationHandler.END
 
-    # Извлекаем user_id из callback_data
     user_id = int(data.split('_')[2])
 
     user_data = UserManager.get_user_by_id(user_id)
@@ -185,7 +202,7 @@ async def delete_user_selected(update: Update, context: ContextTypes.DEFAULT_TYP
 
     # Подтверждение удаления
     keyboard = [
-        [InlineKeyboardButton("✅ Подтвердить удаление", callback_data=f"delete_confirm_{user_id}"),
+        [InlineKeyboardButton("✅ Подтвердить удаление", callback_data=f"delete_confirm_{user_id}")],
         [InlineKeyboardButton("❌ Отмена", callback_data='delete_cancel')
     ]
 
@@ -218,7 +235,6 @@ async def delete_user_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE
     if 'delete_confirm' not in data:
         return
 
-    # Извлекаем user_id из callback_data
     user_id = int(data.split('_')[2])
 
     # Удаляем пользователя
@@ -232,7 +248,7 @@ async def delete_user_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE
     return ConversationHandler.END
 
 
-async def admin_menu_handler(update: Update, ContextTypes.DEFAULT_TYPE):
+async def admin_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработка кнопок админ-меню"""
     query = update.callback_query
     await query.answer()
@@ -244,5 +260,26 @@ async def admin_menu_handler(update: Update, ContextTypes.DEFAULT_TYPE):
     elif query.data == 'admin_delete_user':
         await delete_user_start(update, context)
     elif query.data == 'admin_back':
-        await query.edit_message_text('Вернулись в главное меню.')
+        await query.edit_message_text('🔙 Вернулись в главное меню.')
 
+
+def get_admin_handler():
+    """Получить обработчики админ-панели"""
+    return [
+        ConversationHandler(
+            entry_points=[CallbackQueryHandler(admin_add_user_start, pattern='^admin_add_user$')],
+            states={
+                SELECTING_USER_TYPE: [CallbackQueryHandler(admin_add_user_role, pattern='^add_role_')],
+                ENTERING_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_add_user_name)],
+                ENTERING_TELEGRAM_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_add_user_telegram_id)]
+            },
+            fallbacks=[MessageHandler(filters.COMMAND, lambda u, c: ConversationHandler.END)]
+        ),
+        ConversationHandler(
+            entry_points=[CallbackQueryHandler(delete_user_start, pattern='^admin_delete_user$')],
+            states={
+                SELECTING_USER_FOR_DELETE: [CallbackQueryHandler(delete_user_selected, pattern='^delete_user_|^delete_cancel')]
+            },
+            fallbacks=[MessageHandler(filters.COMMAND, lambda u, c: ConversationHandler.END)]
+        )
+    ]
