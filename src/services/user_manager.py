@@ -140,3 +140,44 @@ class UserManager:
         """Проверить, является ли пользователь администратором"""
         user = UserManager.get_user_by_telegram_id(telegram_id)
         return user is not None and user['role'] == 'dispatcher'
+
+    @staticmethod
+    def delete_user(user_id: int) -> bool:
+        """Удалить пользователя"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+            conn.commit()
+            return True
+        except Exception:
+            return False
+        finally:
+            conn.close()
+
+    @staticmethod
+    def get_user_by_id(user_id: int) -> dict:
+        """Получить пользователя по ID"""
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT id, telegram_id, name, role, reference_id, is_active, created_at
+            FROM users WHERE id = ?
+        ''', (user_id,))
+
+        row = cursor.fetchone()
+        conn.close()
+
+        if row:
+            return {
+                'id': row[0],
+                'telegram_id': row[1],
+                'name': row[2],
+                'role': row[3],
+                'reference_id': row[4],
+                'is_active': bool(row[5]),
+                'created_at': row[6]
+            }
+        return None

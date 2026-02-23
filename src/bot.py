@@ -7,7 +7,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from database import init_db
 from services.message_processor import MessageProcessor
 from handlers.registration import register_handler, register_start
-from handlers.admin import admin_menu, admin_menu_handler, get_admin_handler
+from handlers.admin import admin_menu, admin_menu_handler, get_admin_handler, delete_user_start, delete_user_selected
 from handlers.orders import new_order_start, new_order_handler
 from handlers.reports import report_doctors, report_technicians, report_work_types, report_period_start, report_period_handler
 from handlers.change_role import change_role_start, change_role_handler
@@ -60,6 +60,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🔹 Для диспетчера:
 /neworder - Создать новый заказ
 /admin - Админ-панель управления пользователями
+/delete_user - Удалить пользователя
 /report_doctors - Отчет по врачам (все время)
 /report_technicians - Отчет по техникам (все время)
 /report_work_types - Отчет по видам работ (все время)
@@ -97,6 +98,7 @@ async def main_async():
     application.add_handler(CommandHandler('admin', admin_menu))
     application.add_handler(CommandHandler('neworder', new_order_start))
     application.add_handler(CommandHandler('changerole', change_role_start))
+    application.add_handler(CommandHandler('delete_user', delete_user_start))
     application.add_handler(CommandHandler('report_doctors', report_doctors))
     application.add_handler(CommandHandler('report_technicians', report_technicians))
     application.add_handler(CommandHandler('report_work_types', report_work_types))
@@ -107,8 +109,8 @@ async def main_async():
     application.add_handler(new_order_handler)
     application.add_handler(change_role_handler)
     application.add_handler(report_period_handler)
-
     application.add_handler(CallbackQueryHandler(admin_menu_handler, pattern='^admin_'))
+    application.add_handler(CallbackQueryHandler(delete_user_selected, pattern='^delete_user_|^delete_cancel'))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
     print('Bot started...')
