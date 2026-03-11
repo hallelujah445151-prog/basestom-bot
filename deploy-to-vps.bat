@@ -60,6 +60,28 @@ echo User: %VPS_USER%
 echo Enter password: ^&PJc52K5gNG4
 echo.
 
+echo Step 0: Testing connection...
+ping -n 2 %VPS_IP% >nul
+if errorlevel 1 (
+    echo [ERROR] Cannot connect to %VPS_IP%
+    echo.
+    echo Possible reasons:
+    echo 1. VPS is offline or not running
+    echo 2. Firewall is blocking port 22
+    echo 3. Wrong IP address
+    echo.
+    echo Please check:
+    echo - Can you access the VPS via SSH manually?
+    echo - Is the VPS running?
+    echo - Is port 22 open on the firewall?
+    echo.
+    pause
+    exit /b 1
+)
+
+echo [OK] Connection test passed
+echo.
+
 REM Create archive
 echo Creating project archive...
 
