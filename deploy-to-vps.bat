@@ -161,8 +161,16 @@ if errorlevel 1 (
     exit /b 1
 )
 
+echo Step 5b: Creating log files...
+ssh %VPS_USER%@%VPS_IP% "touch /var/log/basestom-bot.out.log /var/log/basestom-bot.err.log && chmod 644 /var/log/basestom-bot.*.log"
+
+if errorlevel 1 (
+    echo [WARNING] Failed to create log files, continuing...
+    echo.
+)
+
 echo Step 6: Checking files exist...
-ssh %VPS_USER%@%VPS_IP% "ls -la %VPS_PATH%/src/bot.py && ls -la %VPS_PATH%/venv/bin/python"
+ssh %VPS_USER%@%VPS_IP% "ls -la %VPS_PATH%/src/bot.py && ls -la %VPS_PATH%/venv/bin/python && %VPS_PATH%/venv/bin/python --version"
 
 if errorlevel 1 (
     echo [ERROR] Required files not found
@@ -170,20 +178,26 @@ if errorlevel 1 (
     exit /b 1
 )
 
+echo Step 6b: Testing bot manually...
+ssh %VPS_USER%@%VPS_IP% "cd %VPS_PATH% && timeout 5 venv/bin/python src/bot.py 2>&1 | head -20 || echo 'Bot test completed (may have timed out)'"
+
 echo Step 7: Starting bot...
-ssh %VPS_USER%@%VPS_IP% "supervisorctl stop basestom-bot 2>/dev/null || true && supervisorctl start basestom-bot && sleep 2 && supervisorctl status basestom-bot"
+ssh %VPS_USER%@%VPS_IP% "supervisorctl stop basestom-bot 2>/dev/null || true && supervisorctl start basestom-bot && sleep 3 && supervisorctl status basestom-bot"
 
 if errorlevel 1 (
     echo [ERROR] Failed to start bot
     echo.
     echo Checking supervisor logs...
-    ssh %VPS_USER%@%VPS_IP% "tail -20 /var/log/supervisor/basestom-bot-stdout.log || tail -20 /var/log/supervisor/basestom-bot.err.log || echo 'No logs found'"
-    pause
-    exit /b 1
-)
-
-if errorlevel 1 (
-    echo [ERROR] Failed to start bot
+    echo.
+    echo === Standard Output Log ===
+    ssh %VPS_USER%@%VPS_IP% "tail -30 /var/log/basestom-bot.out.log 2>/dev/null || echo 'No stdout log found'"
+    echo.
+    echo === Error Log ===
+    ssh %VPS_USER%@%VPS_IP% "tail -30 /var/log/basestom-bot.err.log 2>/dev/null || echo 'No error log found'"
+    echo.
+    echo === Supervisor Status ===
+    ssh %VPS_USER%@%VPS_IP% "supervisorctl status basestom-bot"
+    echo.
     pause
     exit /b 1
 )
