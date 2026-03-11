@@ -21,14 +21,22 @@
   - `config/` - конфигурации
   - `bot.py` - главный файл бота
 - `data/` - база данных и реестры
-  - `references.json` - реестры врачей, техников и видов работ
-  - `orders.db` - база данных заказов (создается автоматически)
-- `.env` - переменные окружения
+   - `references.json` - реестры врачей, техников и видов работ
+   - `orders.db` - база данных заказов (создается автоматически)
+- `src/.env` - переменные окружения (токены)
 - `requirements.txt` - зависимости Python
+- `VPS_DEPLOYMENT.md` - инструкция по деплою на VPS
+- `DEPLOYMENT_FILES.md` - список файлов для деплоя
+- `supervisor.conf` - конфигурация Supervisor для автозапуска
+- `deploy.sh` - скрипт автоматической установки
+- `src/.env.example` - пример переменных окружения
 - `AGENTS.md` - документация для AI агента
-- `references.md` - требования к проекту
+- `references.md` - требования к проекту (архивный файл)
+- `REPLIT_DEPLOYMENT.md` - инструкция для Replit (архивный файл)
 
 ## Установка
+
+### Вариант 1: Локальная установка
 
 1. Установите зависимости:
 ```bash
@@ -38,15 +46,30 @@ pip install -r requirements.txt
 2. Создайте бота через @BotFather в Telegram и получите токен
 
 3. Получите API ключ от OpenRouter:
-   - Зарегистрируйтесь на https://openrouter.ai/
-   - Получите API ключ в настройках аккаунта
-   - Используется бесплатная модель Meta Llama 3 8B (без затрат)
+    - Зарегистрируйтесь на https://openrouter.ai/
+    - Получите API ключ в настройках аккаунта
+    - Используется бесплатная модель Meta Llama 3 8B (без затрат)
 
 4. Добавьте токены в `.env`:
 ```
 BOT_TOKEN=ваш_токен_от_BotFather
 OPENROUTER_API_KEY=ваш_ключ_от_OpenRouter
 ```
+
+### Вариант 2: Развертывание на VPS (для продакшена)
+
+Для постоянной работы бота используйте VPS с автозапуском через Supervisor.
+
+📖 **Подробная инструкция:** [VPS_DEPLOYMENT.md](VPS_DEPLOYMENT.md)
+
+📦 **Список файлов для деплоя:** [DEPLOYMENT_FILES.md](DEPLOYMENT_FILES.md)
+
+**Кратко:**
+1. Загрузите файлы на VPS
+2. Создайте виртуальное окружение и установите зависимости
+3. Настройте `.env` с токенами
+4. Настройте Supervisor для автозапуска
+5. Запустите бота через Supervisor
 
 ## Запуск
 
@@ -115,9 +138,24 @@ python src/bot.py
 
 ## Тестирование
 
+### Локально
+
 1. Запустите бота: `python src/bot.py`
-   - 🤖 Бот запущен
-   - 🔄 Фоновый процесс напоминаний запущен (проверка каждые 5 минут)
+    - 🤖 Бот запущен
+    - 🔄 Фоновый процесс напоминаний запущен (проверка каждые 5 минут)
+
+### На VPS
+
+1. Следуйте инструкции в [VPS_DEPLOYMENT.md](VPS_DEPLOYMENT.md)
+2. После настройки бота будет работать автоматически через Supervisor
+3. Управление ботом:
+   ```bash
+   sudo supervisorctl start basestom-bot      # Запуск
+   sudo supervisorctl stop basestom-bot       # Остановка
+   sudo supervisorctl restart basestom-bot    # Рестарт
+   sudo supervisorctl status basestom-bot     # Статус
+   sudo supervisorctl tail -f basestom-bot    # Логи
+   ```
 
 2. В Telegram выполните `/register` для саморегистрации
 
@@ -277,4 +315,65 @@ python src/bot.py
 
 [дальше техники и виды работ]
 ```
+
+---
+
+## 🚀 Развертывание
+
+### Для продакшена (VPS)
+
+Для постоянной работы бота рекомендуем развернуть на VPS с автозапуском.
+
+📖 **Инструкция по деплою:** [VPS_DEPLOYMENT.md](VPS_DEPLOYMENT.md)
+
+📦 **Файлы для деплоя:** [DEPLOYMENT_FILES.md](DEPLOYMENT_FILES.md)
+
+**Преимущества VPS:**
+- ✅ Работает постоянно, не спит
+- ✅ Автоматический запуск при перезагрузке сервера
+- ✅ Масштабируемость
+- ✅ Полный контроль над сервером
+
+**Быстрый старт на VPS:**
+```bash
+# 1. Загрузите файлы на VPS
+scp -r basestom/* user@your-vps-ip:/tmp/basestom-bot/
+
+# 2. На VPS
+ssh user@your-vps-ip
+sudo mkdir -p /opt/basestom-bot
+sudo mv /tmp/basestom-bot/* /opt/basestom-bot/
+cd /opt/basestom-bot
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# 3. Настройте .env
+nano src/.env
+# Добавьте токены
+
+# 4. Настройте Supervisor
+sudo cp supervisor.conf /etc/supervisor/conf.d/basestom-bot.conf
+sudo sed -i "s/your_username/$(whoami)/g" /etc/supervisor/conf.d/basestom-bot.conf
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start basestom-bot
+```
+
+### Для тестирования (Replit)
+
+Для быстрого тестирования можно использовать Replit.
+
+📖 **Инструкция для Replit:** [REPLIT_DEPLOYMENT.md](REPLIT_DEPLOYMENT.md)
+
+**Преимущества Replit:**
+- ✅ Полностью бесплатно
+- ✅ Быстрое развертывание
+- ✅ Логи в реальном времени
+
+**Недостатки Replit:**
+- ❌ Переходит в спящий режим при неактивности
+- ❌ База данных не сохраняется между перезапусками
+
+⚠️ **Важно:** Для продакшена используйте VPS, а не Replit!
 
