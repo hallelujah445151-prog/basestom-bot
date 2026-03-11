@@ -105,7 +105,8 @@ async def main_async():
     application.add_handler(CommandHandler('report_period', report_period_start))
 
     application.add_handler(register_handler)
-    application.add_handler(get_admin_handler())
+    for handler in get_admin_handler():
+        application.add_handler(handler)
     application.add_handler(new_order_handler)
     application.add_handler(change_role_handler)
     application.add_handler(report_period_handler)
