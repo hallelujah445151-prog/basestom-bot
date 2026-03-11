@@ -126,7 +126,7 @@ if errorlevel 1 (
 )
 
 echo Step 2: Cloning from GitHub...
-ssh %VPS_USER%@%VPS_IP% "rm -rf %VPS_PATH% && git clone https://github.com/hallelujah445151-prog/basestom-bot.git %VPS_PATH%"
+ssh %VPS_USER%@%VPS_IP% "rm -rf %VPS_PATH% && git clone https://github.com/hallelujah445151-prog/basestom-bot.git %VPS_PATH% && cd %VPS_PATH% && git pull origin master"
 
 if errorlevel 1 (
     echo [ERROR] Failed to clone from GitHub
