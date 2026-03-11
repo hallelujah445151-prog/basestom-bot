@@ -95,7 +95,7 @@ echo.
 
 REM Execute commands on VPS
 echo Step 1: Updating system and installing git...
-ssh %VPS_USER%@%VPS_IP% "apt update && apt upgrade -y && apt install -y python3 python3-pip git supervisor"
+ssh %VPS_USER%@%VPS_IP% "apt update && apt upgrade -y && apt install -y python3 python3-pip python3-venv git supervisor"
 
 if errorlevel 1 (
     echo [ERROR] Failed to update system
