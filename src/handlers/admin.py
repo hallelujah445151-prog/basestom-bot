@@ -203,7 +203,7 @@ async def delete_user_selected(update: Update, context: ContextTypes.DEFAULT_TYP
     # Подтверждение удаления
     keyboard = [
         [InlineKeyboardButton("✅ Подтвердить удаление", callback_data=f"delete_confirm_{user_id}")],
-        [InlineKeyboardButton("❌ Отмена", callback_data='delete_cancel')
+        [InlineKeyboardButton("❌ Отмена", callback_data='delete_cancel')]
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
