@@ -1,0 +1,38 @@
+# Секреты
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+venv/
+.venv/
+env/
+
+# База данных
+data/orders.db
+*.sqlite
+*.sqlite3
+
+# Логи
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Тестовые файлы
+test_bot.py
+test_send.py
