@@ -131,7 +131,7 @@ if errorlevel 1 (
 )
 
 echo Step 5: Configuring Supervisor...
-ssh %VPS_USER%@%VPS_IP% "cd %VPS_PATH% && sed 's/your_username/root/g' supervisor.conf > /etc/supervisor/conf.d/basestom-bot.conf && supervisorctl reread && supervisorctl update"
+ssh %VPS_USER%@%VPS_IP% "cd %VPS_PATH% && cat supervisor.conf | sed 's|your_username|root|g' > /etc/supervisor/conf.d/basestom-bot.conf && supervisorctl reread && supervisorctl update"
 
 if errorlevel 1 (
     echo [ERROR] Failed to configure Supervisor
@@ -139,8 +139,26 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Step 6: Starting bot...
-ssh %VPS_USER%@%VPS_IP% "supervisorctl stop basestom-bot 2>nul || true && supervisorctl start basestom-bot && supervisorctl status basestom-bot"
+echo Step 6: Checking files exist...
+ssh %VPS_USER%@%VPS_IP% "ls -la %VPS_PATH%/src/bot.py && ls -la %VPS_PATH%/venv/bin/python"
+
+if errorlevel 1 (
+    echo [ERROR] Required files not found
+    pause
+    exit /b 1
+)
+
+echo Step 7: Starting bot...
+ssh %VPS_USER%@%VPS_IP% "supervisorctl stop basestom-bot 2>/dev/null || true && supervisorctl start basestom-bot && sleep 2 && supervisorctl status basestom-bot"
+
+if errorlevel 1 (
+    echo [ERROR] Failed to start bot
+    echo.
+    echo Checking supervisor logs...
+    ssh %VPS_USER%@%VPS_IP% "tail -20 /var/log/supervisor/basestom-bot-stdout.log || tail -20 /var/log/supervisor/basestom-bot.err.log || echo 'No logs found'"
+    pause
+    exit /b 1
+)
 
 if errorlevel 1 (
     echo [ERROR] Failed to start bot
