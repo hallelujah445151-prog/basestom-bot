@@ -170,9 +170,10 @@ async def delete_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = []
     for user_data in users:
         keyboard.append([
-            InlineKeyboardButton(f"🗑️ {user_data['name']} ({user_data['role']})", callback_data=f"delete_user_{user_data['id']}"),
-            InlineKeyboardButton(f"❌ Отмена", callback_data='delete_cancel')
+            InlineKeyboardButton(f"🗑️ {user_data['name']} ({user_data['role']})", callback_data=f"delete_user_{user_data['id']}")
         ])
+
+    keyboard.append([InlineKeyboardButton("❌ Отмена", callback_data='delete_cancel')])
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -257,6 +258,8 @@ async def admin_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await admin_menu(update, context)
     elif query.data == 'admin_users':
         await admin_users_list(update, context)
+    elif query.data == 'admin_add_user':
+        await admin_add_user_start(update, context)
     elif query.data == 'admin_delete_user':
         await delete_user_start(update, context)
     elif query.data == 'admin_back':
@@ -266,6 +269,7 @@ async def admin_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 def get_admin_handler():
     """Получить обработчики админ-панели"""
     return [
+        CallbackQueryHandler(admin_menu_handler, pattern='^admin_'),
         ConversationHandler(
             entry_points=[CallbackQueryHandler(admin_add_user_start, pattern='^admin_add_user$')],
             states={
