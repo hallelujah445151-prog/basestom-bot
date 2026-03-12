@@ -1,7 +1,7 @@
 import os
 import sys
 from telegram import Update
-from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, filters
+from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, filters, CommandHandler
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from services.user_manager import UserManager
 from services.message_processor import MessageProcessor
@@ -104,7 +104,8 @@ async def text_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'work_type': processed_data.get('work_type'),
             'quantity': processed_data.get('quantity'),
             'deadline': processed_data.get('deadline'),
-            'description': text
+            'description': text,
+            'photo_id': photo_id
         }
 
         notification_service = NotificationService(os.getenv('BOT_TOKEN'))
@@ -124,6 +125,7 @@ async def text_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except sqlite3.Error as e:
         await update.message.reply_text(f'❌ Ошибка создания заказа: {e}')
         return ConversationHandler.END
+
     finally:
         conn.close()
 
@@ -135,7 +137,7 @@ async def cancel_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 new_order_handler = ConversationHandler(
-    entry_points=[],
+    entry_points=[CommandHandler('neworder', new_order_start)],
     states={
         WAITING_PHOTO: [MessageHandler(filters.PHOTO, photo_received)],
         WAITING_TEXT: [MessageHandler(filters.TEXT & ~filters.COMMAND, text_received)]

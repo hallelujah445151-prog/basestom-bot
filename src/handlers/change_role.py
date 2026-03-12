@@ -66,25 +66,32 @@ async def role_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'doctor': 'Врач'
     }[role]
 
-    # Удаляем старую роль из users
+    # Обновляем роль в users
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute('DELETE FROM users WHERE id = ?', (user_id,))
+    cursor.execute('UPDATE users SET role = ? WHERE id = ?', (role, user_id))
     conn.commit()
     conn.close()
 
     # Возвращаем обновленного пользователя
+    capabilities = []
+    if role == 'dispatcher':
+        capabilities.append('📝 Создавать заказы и просматривать отчеты')
+    if role == 'technician':
+        capabilities.append('🔧 Получать уведомления о заказах')
+    if role == 'doctor':
+        capabilities.append('📋 Получать уведомления о назначении')
+
+    capabilities_text = '\n'.join(capabilities) if capabilities else ''
+
     await query.edit_message_text(
         f'✅ Роль изменена на: {role_name}\n\n'
-        f'💡 Новые возможности:\n'
-        f'{"📝 Создавать заказы и просматривать отчеты" if role == "dispatcher" else ""}'
-        f'{"🔧 Получать уведомления о заказах" if role == "technician" else ""}'
-        f'{"📋 Получать уведомления о назначении" if role == "doctor" else ""}'
+        f'💡 Новые возможности:\n{capabilities_text}'
     )
 
 
 change_role_handler = CallbackQueryHandler(
     role_selected,
-    lambda c: c.data and c.data.startswith(('role_dispatcher_', 'role_technician_', 'role_doctor_', 'role_cancel_'))
+    lambda c: c.data and c.data.startswith('role_dispatcher_') or c.data.startswith('role_technician_') or c.data.startswith('role_doctor_') or c.data.startswith('role_cancel_')
 )
