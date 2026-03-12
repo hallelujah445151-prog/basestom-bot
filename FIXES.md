@@ -2,6 +2,27 @@
 
 ## Исправленные проблемы
 
+### 1. admin.py - Админ-панель (ИСПРАВЛЕНО)
+
+**Проблемы:**
+- ❌ Кнопки админ-меню не работали (admin_menu_handler не обрабатывал callback'ы)
+- ❌ admin_menu, admin_add_user_start, delete_user_start использовали update.message, но вызывались из callback_query
+- ❌ Кнопка "Отмена" в /delete_user была в цикле
+- ❌ NameError: name 'admin_add_user_role' is not defined (последняя ошибка)
+
+**Исправления:**
+- ✅ Разделены callback-функции: admin_menu_handler обрабатывает кнопки админ-меню
+- ✅ admin_menu теперь вызывается только через команду /admin
+- ✅ admin_add_user_start, delete_user_start вызываются через admin_menu_handler
+- ✅ Кнопка "Отмена" вынесена из цикла
+- ✅ admin_menu_handler вызывает функции напрямую, без инструкций
+
+**Изменения:**
+- Переписан admin_menu_handler для правильной обработки callback'ов
+- Добавлены inline-кнопки в admin_menu_handler для "Админ-панель"
+- get_admin_handler теперь возвращает корректный список обработчиков
+- Удалены инструкции из admin_menu_handler, теперь прямые вызовы функций
+
 ### 1. admin.py - Админ-панель
 
 **Проблемы:**
