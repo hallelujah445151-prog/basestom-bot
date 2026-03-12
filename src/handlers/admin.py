@@ -322,19 +322,9 @@ async def admin_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if query.data == 'admin_users':
         await admin_users_list(update, context)
     elif query.data == 'admin_add_user':
-        # Показываем инструкции вместо запуска диалога
-        await query.edit_message_text(
-            '➕ Добавить пользователя\n\n'
-            'Для добавления пользователя используйте команду:\n'
-            '/admin_add_user - выбрать роль и ввести данные'
-        )
+        await admin_add_user_start(update, context)
     elif query.data == 'admin_delete_user':
-        # Показываем инструкции вместо запуска диалога
-        await query.edit_message_text(
-            '🗑️ Удаление пользователя\n\n'
-            'Для удаления пользователя используйте команду:\n'
-            '/delete_user - выбрать пользователя для удаления'
-        )
+        await delete_user_start(update, context)
     elif query.data == 'admin_back':
         await query.edit_message_text('🔙 Вернулись в главное меню.')
 
@@ -346,8 +336,6 @@ def get_admin_handler():
         CallbackQueryHandler(admin_add_user_role, pattern='^add_role_'),
         CallbackQueryHandler(delete_user_selected, pattern='^delete_user_|^delete_cancel'),
         CallbackQueryHandler(delete_user_confirm, pattern='^delete_confirm_|^delete_cancel'),
-        CommandHandler('admin_add_user', admin_add_user_start),
-        CommandHandler('delete_user', delete_user_start),
         ConversationHandler(
             entry_points=[
                 MessageHandler(filters.TEXT & ~filters.COMMAND, admin_add_user_telegram_id)
