@@ -32,13 +32,13 @@ async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def admin_users_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Показать список всех пользователей"""
+    query = update.callback_query
     user = UserManager.get_user_by_telegram_id(update.effective_user.id)
 
     if not user or user['role'] != 'dispatcher':
-        await update.message.reply_text('❌ У вас нет прав для этой команды.')
+        await query.edit_message_text('❌ У вас нет прав для этой команды.')
         return
 
-    query = update.callback_query
     await query.answer()
 
     users = UserManager.get_all_users()
@@ -254,9 +254,7 @@ async def admin_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     query = update.callback_query
     await query.answer()
 
-    if query.data == 'admin_menu':
-        await admin_menu(update, context)
-    elif query.data == 'admin_users':
+    if query.data == 'admin_users':
         await admin_users_list(update, context)
     elif query.data == 'admin_add_user':
         await admin_add_user_start(update, context)
@@ -270,19 +268,13 @@ def get_admin_handler():
     """Получить обработчики админ-панели"""
     return [
         CallbackQueryHandler(admin_menu_handler, pattern='^admin_'),
+        CallbackQueryHandler(admin_add_user_role, pattern='^add_role_'),
+        CallbackQueryHandler(delete_user_selected, pattern='^delete_user_|^delete_cancel'),
+        CallbackQueryHandler(delete_user_confirm, pattern='^delete_confirm_|^delete_cancel'),
         ConversationHandler(
-            entry_points=[CallbackQueryHandler(admin_add_user_start, pattern='^admin_add_user$')],
+            entry_points=[MessageHandler(filters.TEXT & ~filters.COMMAND, admin_add_user_telegram_id)],
             states={
-                SELECTING_USER_TYPE: [CallbackQueryHandler(admin_add_user_role, pattern='^add_role_')],
-                ENTERING_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_add_user_name)],
-                ENTERING_TELEGRAM_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_add_user_telegram_id)]
-            },
-            fallbacks=[MessageHandler(filters.COMMAND, lambda u, c: ConversationHandler.END)]
-        ),
-        ConversationHandler(
-            entry_points=[CallbackQueryHandler(delete_user_start, pattern='^admin_delete_user$')],
-            states={
-                SELECTING_USER_FOR_DELETE: [CallbackQueryHandler(delete_user_selected, pattern='^delete_user_|^delete_cancel')]
+                ENTERING_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_add_user_name)]
             },
             fallbacks=[MessageHandler(filters.COMMAND, lambda u, c: ConversationHandler.END)]
         )

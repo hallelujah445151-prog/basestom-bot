@@ -1,5 +1,6 @@
 from telegram import Update
-from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, filters
+from telegram.ext import ContextTypes, ConversationHandler, MessageHandler, filters, CommandHandler
+from datetime import datetime
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -147,7 +148,7 @@ async def report_period_cancel(update: Update, context: ContextTypes.DEFAULT_TYP
 
 
 report_period_handler = ConversationHandler(
-    entry_points=[],
+    entry_points=[CommandHandler('report_period', report_period_start)],
     states={
         ENTER_START_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, report_period_start_date)],
         ENTER_END_DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, report_period_end_date)]
