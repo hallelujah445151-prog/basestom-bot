@@ -6,8 +6,8 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 from database import init_db
 from services.message_processor import MessageProcessor
-from handlers.registration import register_handler, register_start
-from handlers.admin import admin_menu, admin_menu_handler, get_admin_handler, delete_user_start, delete_user_selected
+from handlers.registration import register_handler
+from handlers.admin import admin_menu, admin_menu_handler, get_admin_handler
 from handlers.orders import new_order_start, new_order_handler
 from handlers.reports import report_doctors, report_technicians, report_work_types, report_period_start, report_period_handler
 from handlers.change_role import change_role_start, change_role_handler
@@ -20,8 +20,9 @@ BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        user_manager = __import__('services.user_manager', fromlist=['UserManager']).UserManager
-        user = user_manager.UserManager.get_user_by_telegram_id(update.effective_user.id)
+        from services.user_manager import UserManager
+        user_manager = UserManager
+        user = user_manager.get_user_by_telegram_id(update.effective_user.id)
 
         if user:
             welcome_text = f'👋 Привет, {user["name"]}!\n\n'
@@ -98,18 +99,20 @@ async def main_async():
     application.add_handler(CommandHandler('admin', admin_menu))
     application.add_handler(CommandHandler('neworder', new_order_start))
     application.add_handler(CommandHandler('changerole', change_role_start))
-    application.add_handler(CommandHandler('delete_user', delete_user_start))
+    application.add_handler(CommandHandler('delete_user', lambda u, c: None))
     application.add_handler(CommandHandler('report_doctors', report_doctors))
     application.add_handler(CommandHandler('report_technicians', report_technicians))
     application.add_handler(CommandHandler('report_work_types', report_work_types))
     application.add_handler(CommandHandler('report_period', report_period_start))
-
+    application.add_handler(CommandHandler('admin_add_user', lambda u, c: None))
+    application.add_handler(CommandHandler('delete_user', lambda u, c: None))
     application.add_handler(register_handler)
     for handler in get_admin_handler():
         application.add_handler(handler)
     application.add_handler(new_order_handler)
     application.add_handler(change_role_handler)
     application.add_handler(report_period_handler)
+    application.add_handler(CallbackQueryHandler(admin_menu_handler, pattern='^admin_'))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
     print('Bot started...')
