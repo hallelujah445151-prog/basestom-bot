@@ -110,8 +110,6 @@ async def main_async():
     application.add_handler(new_order_handler)
     application.add_handler(change_role_handler)
     application.add_handler(report_period_handler)
-    application.add_handler(CallbackQueryHandler(admin_menu_handler, pattern='^admin_'))
-    application.add_handler(CallbackQueryHandler(delete_user_selected, pattern='^delete_user_|^delete_cancel'))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
     print('Bot started...')
