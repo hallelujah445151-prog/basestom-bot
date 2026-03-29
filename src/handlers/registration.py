@@ -21,8 +21,7 @@ async def register_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
         [InlineKeyboardButton("Техник", callback_data="role_technician")],
-        [InlineKeyboardButton("Врач", callback_data="role_doctor")],
-        [InlineKeyboardButton("Диспетчер", callback_data="role_dispatcher")]
+        [InlineKeyboardButton("Врач", callback_data="role_doctor")]
     ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)

@@ -1,19 +1,113 @@
 import os
 import time
+import re
 from openai import OpenAI
-from .reference_manager import ReferenceManager
 
 
 class MessageProcessor:
     """Обработка сообщений с помощью ИИ"""
 
     def __init__(self):
-        self.client = OpenAI(
-            api_key=os.getenv('OPENROUTER_API_KEY'),
-            base_url="https://openrouter.ai/api/v1",
-            timeout=10.0
-        )
-        self.ref_manager = ReferenceManager()
+        api_key = os.getenv('OPENROUTER_API_KEY')
+        if not api_key:
+            print("WARNING: OPENROUTER_API_KEY not found in environment, using simple parser only")
+            self.client = None
+        else:
+            try:
+                self.client = OpenAI(
+                    api_key=api_key,
+                    base_url="https://openrouter.ai/api/v1",
+                    timeout=10.0
+                )
+            except Exception as e:
+                print(f"WARNING: Failed to initialize OpenAI client: {e}, using simple parser only")
+                self.client = None
+
+    def parse_message_simple(self, text: str) -> dict:
+        """Простой парсер сообщения без AI"""
+        print(f"[DEBUG parse_message_simple] Parsing: '{text}'")
+        result = {
+            'technician_name': None,
+            'doctor_name': None,
+            'patient_name': None,
+            'work_type': None,
+            'quantity': None,
+            'deadline': None,
+            'notes': None
+        }
+
+        text_lower = text.lower()
+
+        try:
+            quantity_match = re.search(r'(\d+)\s*шт', text)
+            if quantity_match:
+                result['quantity'] = int(quantity_match.group(1))
+        except:
+            pass
+
+        try:
+            deadline_match = re.search(r'(\d{1,2})\.(\d{1,2})\.(\d{4})', text)
+            if deadline_match:
+                result['deadline'] = deadline_match.group(0)
+        except:
+            pass
+
+        parts = text.split()
+
+        work_types = [
+            'циркон', 'винт', 'металлокерамика', 'виниры', 'коронки',
+            'мост', 'протез', 'брекеты', 'отбеливание'
+        ]
+
+        for i, part in enumerate(parts):
+            part_lower = part.lower().strip('.,;')
+            if part_lower in work_types or any(wt in part_lower for wt in work_types):
+                end_idx = i + 1
+                while end_idx < len(parts) and not any(wt in parts[end_idx].lower() for wt in work_types):
+                    end_idx += 1
+                result['work_type'] = ' '.join(parts[i:end_idx]).strip('.,;')
+
+                if i > 0:
+                    result['technician_name'] = parts[i-1].strip('.,;')
+                break
+
+        patient_keywords = ['пациент', 'для']
+        for i, part in enumerate(parts):
+            part_lower = part.lower()
+            if any(kw in part_lower for kw in patient_keywords):
+                if i + 1 < len(parts):
+                    patient_parts = []
+                    j = i + 1
+                    while j < len(parts) and not any(wt in parts[j].lower() for wt in work_types) and parts[j].lower() not in ['шт', 'на', 'от']:
+                        patient_parts.append(parts[j].strip('.,;'))
+                        j += 1
+                    if patient_parts:
+                        result['patient_name'] = ' '.join(patient_parts)
+                break
+
+        doctor_keywords = ['от', 'врач']
+        for i, part in enumerate(parts):
+            part_lower = part.lower()
+            if 'от' in part_lower:
+                if i + 1 < len(parts):
+                    result['doctor_name'] = parts[i+1].strip('.,;')
+                break
+
+        if not result['technician_name'] and parts:
+            result['technician_name'] = parts[0].strip('.,;')
+
+        if not result['work_type']:
+            for part in parts:
+                part_lower = part.lower().strip('.,;')
+                if any(wt in part_lower for wt in work_types):
+                    result['work_type'] = part
+                    break
+
+        if not result['work_type']:
+            result['work_type'] = 'Не указано'
+
+        print(f"[DEBUG parse_message_simple] Result: {result}")
+        return result
 
     def normalize_message(self, text: str) -> dict:
         """Нормализация короткого сообщения в корректный формат"""
@@ -64,34 +158,13 @@ class MessageProcessor:
             import json
             result = json.loads(response.choices[0].message.content)
 
-            return self.enhance_with_references(result)
+            print(f"[DEBUG normalize_message] OpenRouter result: {result}")
+            return result
 
         except Exception as e:
-            print(f"Ошибка обработки сообщения: {e}")
-            return None
-
-    def enhance_with_references(self, data: dict) -> dict:
-        """Улучшение данных с помощью реестров"""
-        enhanced = data.copy()
-
-        if data.get('technician_name'):
-            technician = self.ref_manager.find_technician(data['technician_name'])
-            if technician:
-                enhanced['technician_id'] = technician['id']
-                enhanced['technician_name'] = technician['name']
-
-        if data.get('doctor_name'):
-            doctor = self.ref_manager.find_doctor(data['doctor_name'])
-            if doctor:
-                enhanced['doctor_id'] = doctor['id']
-                enhanced['doctor_name'] = doctor['name']
-
-        if data.get('work_type'):
-            work_type = self.ref_manager.find_work_type(data['work_type'])
-            if work_type:
-                enhanced['work_type'] = work_type['name']
-
-        return enhanced
+            print(f"OpenAI Error: {e}")
+            print("Falling back to simple parser...")
+            return self.parse_message_simple(text)
 
     def format_message(self, data: dict) -> str:
         """Форматирование данных в корректное сообщение"""

@@ -1,6 +1,7 @@
 from telegram import Bot, InputFile
 import sys
 import os
+import difflib
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from services.user_manager import UserManager
 
@@ -14,18 +15,40 @@ class NotificationService:
 
     async def send_to_technician(self, order: dict, photo_id: str = None):
         """Отправить уведомление технику"""
-        if not order.get('technician_id'):
+        technician_name = order.get('technician_name')
+        print(f"[DEBUG] send_to_technician: technician_name = '{technician_name}'")
+
+        if not technician_name:
+            print("[DEBUG] send_to_technician: technician_name is empty, returning False")
             return False
 
         technicians = self.user_manager.get_users_by_role('technician')
+        print(f"[DEBUG] send_to_technician: Found {len(technicians)} technicians in database")
+
         technician = None
 
         for tech in technicians:
-            if tech['reference_id'] == order['technician_id']:
+            print(f"[DEBUG] send_to_technician: Checking technician: '{tech['name']}'")
+            if technician_name.lower() in tech['name'].lower() or tech['name'].lower() in technician_name.lower():
                 technician = tech
+                print(f"[DEBUG] send_to_technician: EXACT MATCH FOUND! technician = '{technician['name']}', telegram_id = {technician['telegram_id']}")
                 break
 
         if not technician:
+            print(f"[DEBUG] send_to_technician: No exact match, trying fuzzy matching...")
+            technician_names = [tech['name'] for tech in technicians]
+            matches = difflib.get_close_matches(technician_name, technician_names, n=1, cutoff=0.7)
+            print(f"[DEBUG] send_to_technician: Fuzzy matches: {matches}")
+
+            if matches:
+                for tech in technicians:
+                    if tech['name'] == matches[0]:
+                        technician = tech
+                        print(f"[DEBUG] send_to_technician: FUZZY MATCH FOUND! technician = '{technician['name']}', telegram_id = {technician['telegram_id']}")
+                        break
+
+        if not technician:
+            print(f"[DEBUG] send_to_technician: NO MATCH FOUND for '{technician_name}'")
             return False
 
         message = (
@@ -61,22 +84,45 @@ class NotificationService:
 
     async def send_to_doctor(self, order: dict, photo_id: str = None):
         """Отправить уведомление врачу"""
-        if not order.get('doctor_id'):
+        doctor_name = order.get('doctor_name')
+        print(f"[DEBUG] send_to_doctor: doctor_name = '{doctor_name}'")
+
+        if not doctor_name:
+            print("[DEBUG] send_to_doctor: doctor_name is empty, returning False")
             return False
 
         doctors = self.user_manager.get_users_by_role('doctor')
+        print(f"[DEBUG] send_to_doctor: Found {len(doctors)} doctors in database")
+
         doctor = None
 
         for doc in doctors:
-            if doc['reference_id'] == order['doctor_id']:
+            print(f"[DEBUG] send_to_doctor: Checking doctor: '{doc['name']}'")
+            if doctor_name.lower() in doc['name'].lower() or doc['name'].lower() in doctor_name.lower():
                 doctor = doc
+                print(f"[DEBUG] send_to_doctor: EXACT MATCH FOUND! doctor = '{doctor['name']}', telegram_id = {doctor['telegram_id']}")
                 break
 
         if not doctor:
+            print(f"[DEBUG] send_to_doctor: No exact match, trying fuzzy matching...")
+            doctor_names = [doc['name'] for doc in doctors]
+            matches = difflib.get_close_matches(doctor_name, doctor_names, n=1, cutoff=0.7)
+            print(f"[DEBUG] send_to_doctor: Fuzzy matches: {matches}")
+
+            if matches:
+                for doc in doctors:
+                    if doc['name'] == matches[0]:
+                        doctor = doc
+                        print(f"[DEBUG] send_to_doctor: FUZZY MATCH FOUND! doctor = '{doctor['name']}', telegram_id = {doctor['telegram_id']}")
+                        break
+
+        if not doctor:
+            print(f"[DEBUG] send_to_doctor: NO MATCH FOUND for '{doctor_name}'")
             return False
 
         technician_name = order.get('technician_name', 'Не указан')
         work_type = order.get('work_type', 'Не указано')
+        print(f"[DEBUG] send_to_doctor: Sending notification to doctor '{doctor['name']}'")
 
         message = (
             f"📋 Ваша работа назначена технику!\n\n"
@@ -125,13 +171,25 @@ class NotificationService:
             message += f"📅 Срок выполнения: {deadline}\n"
 
         sent_to = []
-        if order.get('technician_id'):
-            sent_to.append("технику")
-        if order.get('doctor_id'):
-            sent_to.append("врачу")
+        not_sent = []
+
+        if technician_name:
+            if order.get('technician_id'):
+                sent_to.append(f"технику {technician_name}")
+            else:
+                not_sent.append(f"технику {technician_name} (не найден в базе)")
+
+        if order.get('doctor_name'):
+            if order.get('doctor_id'):
+                sent_to.append(f"врачу {order.get('doctor_name')}")
+            else:
+                not_sent.append(f"врачу {order.get('doctor_name')} (не найден в базе)")
 
         if sent_to:
             message += f"\n📤 Уведомления отправлены: {', '.join(sent_to)}"
+
+        if not_sent:
+            message += f"\n⚠️ Уведомления НЕ отправлены: {', '.join(not_sent)}"
 
         try:
             await self.bot.send_message(
@@ -145,16 +203,19 @@ class NotificationService:
 
     async def send_reminder_to_technician(self, order: dict, reminder_message: str):
         """Отправить напоминание технику"""
-        if not order.get('technician_id'):
+        technician_name = order.get('technician_name')
+
+        if not technician_name:
             return False
 
         technicians = self.user_manager.get_users_by_role('technician')
-        technician = None
 
         for tech in technicians:
-            if tech['reference_id'] == order['technician_id']:
+            if technician_name.lower() in tech['name'].lower() or tech['name'].lower() in technician_name.lower():
                 technician = tech
                 break
+        else:
+            technician = None
 
         if not technician:
             return False

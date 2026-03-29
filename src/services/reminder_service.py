@@ -18,8 +18,10 @@ class ReminderService:
         cursor = conn.cursor()
 
         cursor.execute('''
-            SELECT o.id, o.doctor_id, o.technician_id, o.patient_name, o.work_type, o.quantity, o.deadline, o.description, o.photo_id
+            SELECT o.id, o.doctor_id, o.technician_id, t.name as technician_name,
+                   o.patient_name, o.work_type, o.quantity, o.deadline, o.description, o.photo_id
             FROM orders o
+            LEFT JOIN users t ON o.technician_id = t.id
             WHERE o.deadline = ? AND o.status = 'in_progress'
             AND NOT EXISTS (
                 SELECT 1 FROM reminders r WHERE r.order_id = o.id AND r.reminder_type = 'tomorrow'
@@ -35,12 +37,13 @@ class ReminderService:
                 'id': row[0],
                 'doctor_id': row[1],
                 'technician_id': row[2],
-                'patient_name': row[3],
-                'work_type': row[4],
-                'quantity': row[5],
-                'deadline': row[6],
-                'description': row[7],
-                'photo_id': row[8]
+                'technician_name': row[3],
+                'patient_name': row[4],
+                'work_type': row[5],
+                'quantity': row[6],
+                'deadline': row[7],
+                'description': row[8],
+                'photo_id': row[9]
             })
 
         return orders
@@ -54,9 +57,11 @@ class ReminderService:
         cursor = conn.cursor()
 
         cursor.execute('''
-            SELECT id, doctor_id, technician_id, patient_name, work_type, quantity, deadline, description, photo_id
-            FROM orders
-            WHERE deadline = ? AND status = 'in_progress'
+            SELECT o.id, o.doctor_id, o.technician_id, t.name as technician_name,
+                   o.patient_name, o.work_type, o.quantity, o.deadline, o.description, o.photo_id
+            FROM orders o
+            LEFT JOIN users t ON o.technician_id = t.id
+            WHERE o.deadline = ? AND o.status = 'in_progress'
         ''', (today,))
 
         rows = cursor.fetchall()
@@ -68,12 +73,13 @@ class ReminderService:
                 'id': row[0],
                 'doctor_id': row[1],
                 'technician_id': row[2],
-                'patient_name': row[3],
-                'work_type': row[4],
-                'quantity': row[5],
-                'deadline': row[6],
-                'description': row[7],
-                'photo_id': row[8]
+                'technician_name': row[3],
+                'patient_name': row[4],
+                'work_type': row[5],
+                'quantity': row[6],
+                'deadline': row[7],
+                'description': row[8],
+                'photo_id': row[9]
             })
 
         return orders

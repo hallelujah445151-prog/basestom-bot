@@ -11,10 +11,10 @@ SELECTING_USER_FOR_DELETE = range(1)
 
 
 async def admin_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Админ-меню для диспетчера"""
+    """Админ-меню для администратора"""
     user = UserManager.get_user_by_telegram_id(update.effective_user.id)
 
-    if not user or user['role'] != 'dispatcher':
+    if not user or not UserManager.is_user_admin(user):
         await update.message.reply_text('❌ У вас нет прав для этой команды.')
         return
 
@@ -35,7 +35,7 @@ async def admin_users_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user = UserManager.get_user_by_telegram_id(update.effective_user.id)
 
-    if not user or user['role'] != 'dispatcher':
+    if not user or not UserManager.is_user_admin(user):
         await query.edit_message_text('❌ У вас нет прав для этой команды.')
         return
 
@@ -69,54 +69,25 @@ async def admin_add_user_start(update: Update, context: ContextTypes.DEFAULT_TYP
     """Начало добавления пользователя"""
     user = UserManager.get_user_by_telegram_id(update.effective_user.id)
 
-    # Проверяем тип update (callback или message)
+    if not user or not UserManager.is_user_admin(user):
+        if update.callback_query:
+            await update.callback_query.edit_message_text('❌ У вас нет прав для этой команды.')
+        else:
+            await update.message.reply_text('❌ У вас нет прав для этой команды.')
+        return ConversationHandler.END
+
+    keyboard = [
+        [InlineKeyboardButton("Техник", callback_data='add_role_technician')],
+        [InlineKeyboardButton("Врач", callback_data='add_role_doctor')],
+        [InlineKeyboardButton("❌ Отмена", callback_data='add_cancel')]
+    ]
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
     if update.callback_query:
-        # Если callback - вызываем для редактирования сообщения
-        await _admin_add_user_start_callback(update, context, user)
-    elif update.message:
-        # Если message - обычная команда /admin_add_user
-        await _admin_add_user_start_message(update, context, user)
-    return SELECTING_USER_TYPE
-
-
-async def _admin_add_user_start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, user):
-    """Начало добавления пользователя (callback версия)"""
-    query = update.callback_query
-
-    if not user or user['role'] != 'dispatcher':
-        await query.edit_message_text('❌ У вас нет прав для этой команды.')
-        return ConversationHandler.END
-
-    keyboard = [
-        [InlineKeyboardButton("Техник", callback_data='add_role_technician')],
-        [InlineKeyboardButton("Врач", callback_data='add_role_doctor')],
-        [InlineKeyboardButton("Диспетчер", callback_data='add_role_dispatcher')],
-        [InlineKeyboardButton("❌ Отмена", callback_data='add_cancel')]
-    ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await query.edit_message_text('➕ Добавить пользователя\n\nВыберите роль:', reply_markup=reply_markup)
-
-    return SELECTING_USER_TYPE
-
-
-async def _admin_add_user_start_message(update: Update, context: ContextTypes.DEFAULT_TYPE, user):
-    """Начало добавления пользователя (message версия)"""
-    if not user or user['role'] != 'dispatcher':
-        await update.message.reply_text('❌ У вас нет прав для этой команды.')
-        return ConversationHandler.END
-
-    keyboard = [
-        [InlineKeyboardButton("Техник", callback_data='add_role_technician')],
-        [InlineKeyboardButton("Врач", callback_data='add_role_doctor')],
-        [InlineKeyboardButton("Диспетчер", callback_data='add_role_dispatcher')],
-        [InlineKeyboardButton("❌ Отмена", callback_data='add_cancel')]
-    ]
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await update.message.reply_text('➕ Добавить пользователя\n\nВыберите роль:', reply_markup=reply_markup)
+        await update.callback_query.edit_message_text('➕ Добавить пользователя\n\nВыберите роль:', reply_markup=reply_markup)
+    else:
+        await update.message.reply_text('➕ Добавить пользователя\n\nВыберите роль:', reply_markup=reply_markup)
 
     return SELECTING_USER_TYPE
 
@@ -191,68 +162,36 @@ async def delete_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Начало удаления пользователя"""
     user = UserManager.get_user_by_telegram_id(update.effective_user.id)
 
-    # Проверяем тип update (callback или message)
+    if not user or not UserManager.is_user_admin(user):
+        if update.callback_query:
+            await update.callback_query.edit_message_text('❌ У вас нет прав для этой команды.')
+        else:
+            await update.message.reply_text('❌ У вас нет прав для этой команды.')
+        return ConversationHandler.END
+
+    users = UserManager.get_all_users()
+
+    if not users:
+        if update.callback_query:
+            await update.callback_query.edit_message_text('❌ Нет пользователей для удаления.')
+        else:
+            await update.message.reply_text('❌ Нет пользователей для удаления.')
+        return ConversationHandler.END
+
+    keyboard = []
+    for user_data in users:
+        keyboard.append([
+            InlineKeyboardButton(f"🗑️ {user_data['name']} ({user_data['role']})", callback_data=f"delete_user_{user_data['id']}")
+        ])
+
+    keyboard.append([InlineKeyboardButton("❌ Отмена", callback_data='delete_cancel')])
+
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
     if update.callback_query:
-        # Если callback - вызываем для редактирования сообщения
-        await _delete_user_start_callback(update, context, user)
-    elif update.message:
-        # Если message - обычная команда /delete_user
-        await _delete_user_start_message(update, context, user)
-    return SELECTING_USER_FOR_DELETE
-
-
-async def _delete_user_start_callback(update: Update, context: ContextTypes.DEFAULT_TYPE, user):
-    """Начало удаления пользователя (callback версия)"""
-    query = update.callback_query
-
-    if not user or user['role'] != 'dispatcher':
-        await query.edit_message_text('❌ У вас нет прав для этой команды.')
-        return ConversationHandler.END
-
-    users = UserManager.get_all_users()
-
-    if not users:
-        await query.edit_message_text('❌ Нет пользователей для удаления.')
-        return ConversationHandler.END
-
-    keyboard = []
-    for user_data in users:
-        keyboard.append([
-            InlineKeyboardButton(f"🗑️ {user_data['name']} ({user_data['role']})", callback_data=f"delete_user_{user_data['id']}")
-        ])
-
-    keyboard.append([InlineKeyboardButton("❌ Отмена", callback_data='delete_cancel')])
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await query.edit_message_text('🗑️ Удаление пользователя\n\nВыберите пользователя для удаления:', reply_markup=reply_markup)
-
-    return SELECTING_USER_FOR_DELETE
-
-
-async def _delete_user_start_message(update: Update, context: ContextTypes.DEFAULT_TYPE, user):
-    """Начало удаления пользователя (message версия)"""
-    if not user or user['role'] != 'dispatcher':
-        await update.message.reply_text('❌ У вас нет прав для этой команды.')
-        return ConversationHandler.END
-
-    users = UserManager.get_all_users()
-
-    if not users:
-        await update.message.reply_text('❌ Нет пользователей для удаления.')
-        return ConversationHandler.END
-
-    keyboard = []
-    for user_data in users:
-        keyboard.append([
-            InlineKeyboardButton(f"🗑️ {user_data['name']} ({user_data['role']})", callback_data=f"delete_user_{user_data['id']}")
-        ])
-
-    keyboard.append([InlineKeyboardButton("❌ Отмена", callback_data='delete_cancel')])
-
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
-    await update.message.reply_text('🗑️ Удаление пользователя\n\nВыберите пользователя для удаления:', reply_markup=reply_markup)
+        await update.callback_query.edit_message_text('🗑️ Удаление пользователя\n\nВыберите пользователя для удаления:', reply_markup=reply_markup)
+    else:
+        await update.message.reply_text('🗑️ Удаление пользователя\n\nВыберите пользователя для удаления:', reply_markup=reply_markup)
 
     return SELECTING_USER_FOR_DELETE
 
@@ -313,7 +252,6 @@ async def delete_user_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     user_id = int(data.split('_')[2])
 
-    # Удаляем пользователя
     success = UserManager.delete_user(user_id)
 
     if success:
@@ -322,44 +260,6 @@ async def delete_user_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE
         await query.edit_message_text(f'❌ Ошибка при удалении пользователя ID {user_id}.')
 
     return ConversationHandler.END
-
-
-async def admin_add_user_role(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Выбор роли при добавлении пользователя"""
-    query = update.callback_query
-    await query.answer()
-
-    data = query.data
-
-    if 'add_cancel' in data:
-        await query.edit_message_text('❌ Добавление отменено.')
-        return ConversationHandler.END
-
-    role = data.split('_')[2]
-    context.user_data['add_role'] = role
-
-    await query.edit_message_text(f'✅ Выбрана роль: {role}\n📝 Введите ФИО пользователя:')
-
-    return ENTERING_NAME
-
-
-def get_admin_handler():
-    """Получить обработчики админ-панели"""
-    return [
-        CallbackQueryHandler(admin_menu_handler, pattern='^admin_'),
-        CallbackQueryHandler(admin_add_user_role, pattern='^add_role_'),
-        CallbackQueryHandler(delete_user_selected, pattern='^delete_user_|^delete_cancel'),
-        CallbackQueryHandler(delete_user_confirm, pattern='^delete_confirm_|^delete_cancel'),
-        ConversationHandler(
-            entry_points=[
-                MessageHandler(filters.TEXT & ~filters.COMMAND, admin_add_user_telegram_id)
-            ],
-            states={
-                ENTERING_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_add_user_name)]
-            },
-            fallbacks=[MessageHandler(filters.COMMAND, lambda u, c: ConversationHandler.END)]
-        )
-    ]
 
 
 async def admin_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -375,3 +275,13 @@ async def admin_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await delete_user_start(update, context)
     elif query.data == 'admin_back':
         await query.edit_message_text('🔙 Вернулись в главное меню.')
+
+
+def get_admin_handler():
+    """Получить обработчики админ-панели"""
+    return [
+        CallbackQueryHandler(admin_menu_handler, pattern='^admin_'),
+        CallbackQueryHandler(admin_add_user_role, pattern='^add_role_'),
+        CallbackQueryHandler(delete_user_selected, pattern='^delete_user_|^delete_cancel'),
+        CallbackQueryHandler(delete_user_confirm, pattern='^delete_confirm_|^delete_cancel')
+    ]

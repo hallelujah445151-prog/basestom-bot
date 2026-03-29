@@ -6,6 +6,15 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from database import get_connection
 
 
+def convert_date_format(date_str):
+    """Конвертировать дату из ДД.ММ.ГГГГ в ГГГГ-ММ-ДД"""
+    try:
+        dt = datetime.strptime(date_str, '%d.%m.%Y')
+        return dt.strftime('%Y-%m-%d')
+    except:
+        return None
+
+
 class ReportService:
     """Сервис для сбора статистики и формирования отчетов"""
 
@@ -15,39 +24,56 @@ class ReportService:
         conn = get_connection()
         cursor = conn.cursor()
 
-        query = '''
-            SELECT u.name, COUNT(o.id) as order_count,
-                   GROUP_CONCAT(o.work_type, ', ') as work_types
+        base_query = '''
             FROM orders o
             JOIN users u ON o.doctor_id = u.id
             WHERE o.status = 'in_progress'
         '''
 
         params = []
+        where_clause = base_query
 
         if start_date:
-            query += ' AND DATE(o.created_at) >= DATE(?, "start of day")'
-            params.append(start_date)
+            start_date_sql = convert_date_format(start_date)
+            if start_date_sql:
+                where_clause += ' AND DATE(o.created_at) >= ?'
+                params.append(start_date_sql)
 
         if end_date:
-            query += ' AND DATE(o.created_at) <= DATE(?, "start of day")'
-            params.append(end_date)
+            end_date_sql = convert_date_format(end_date)
+            if end_date_sql:
+                where_clause += ' AND DATE(o.created_at) <= ?'
+                params.append(end_date_sql)
 
-        query += ' GROUP BY u.id ORDER BY order_count DESC'
+        query = f'''
+            SELECT u.name, o.work_type, COUNT(o.id) as order_count
+            {where_clause}
+            GROUP BY u.id, o.work_type
+            ORDER BY u.name, o.work_type
+        '''
 
         cursor.execute(query, params)
         rows = cursor.fetchall()
         conn.close()
 
-        stats = []
+        doc_data = {}
         for row in rows:
-            stats.append({
-                'name': row[0],
-                'order_count': row[1],
-                'work_types': row[2] or ''
+            name = row[0]
+            work_type = row[1]
+            order_count = row[2]
+
+            if name not in doc_data:
+                doc_data[name] = {
+                    'name': name,
+                    'work_types': []
+                }
+
+            doc_data[name]['work_types'].append({
+                'work_type': work_type,
+                'order_count': order_count
             })
 
-        return stats
+        return list(doc_data.values())
 
     @staticmethod
     def get_technician_statistics(start_date=None, end_date=None):
@@ -55,41 +81,58 @@ class ReportService:
         conn = get_connection()
         cursor = conn.cursor()
 
-        query = '''
-            SELECT u.name, COUNT(o.id) as order_count,
-                   SUM(o.quantity) as total_quantity,
-                   GROUP_CONCAT(o.work_type, ', ') as work_types
+        base_query = '''
             FROM orders o
             JOIN users u ON o.technician_id = u.id
             WHERE o.status = 'in_progress'
         '''
 
         params = []
+        where_clause = base_query
 
         if start_date:
-            query += ' AND DATE(o.created_at) >= DATE(?, "start of day")'
-            params.append(start_date)
+            start_date_sql = convert_date_format(start_date)
+            if start_date_sql:
+                where_clause += ' AND DATE(o.created_at) >= ?'
+                params.append(start_date_sql)
 
         if end_date:
-            query += ' AND DATE(o.created_at) <= DATE(?, "start of day")'
-            params.append(end_date)
+            end_date_sql = convert_date_format(end_date)
+            if end_date_sql:
+                where_clause += ' AND DATE(o.created_at) <= ?'
+                params.append(end_date_sql)
 
-        query += ' GROUP BY u.id ORDER BY order_count DESC'
+        query = f'''
+            SELECT u.name, o.work_type, COUNT(o.id) as order_count, SUM(o.quantity) as total_quantity
+            {where_clause}
+            GROUP BY u.id, o.work_type
+            ORDER BY u.name, o.work_type
+        '''
 
         cursor.execute(query, params)
         rows = cursor.fetchall()
         conn.close()
 
-        stats = []
+        tech_data = {}
         for row in rows:
-            stats.append({
-                'name': row[0],
-                'order_count': row[1],
-                'total_quantity': row[2] or 0,
-                'work_types': row[3] or ''
+            name = row[0]
+            work_type = row[1]
+            order_count = row[2]
+            total_quantity = row[3] or 0
+
+            if name not in tech_data:
+                tech_data[name] = {
+                    'name': name,
+                    'work_types': []
+                }
+
+            tech_data[name]['work_types'].append({
+                'work_type': work_type,
+                'order_count': order_count,
+                'total_quantity': total_quantity
             })
 
-        return stats
+        return list(tech_data.values())
 
     @staticmethod
     def get_work_type_statistics(start_date=None, end_date=None):
@@ -107,12 +150,16 @@ class ReportService:
         params = []
 
         if start_date:
-            query += ' AND DATE(created_at) >= DATE(?, "start of day")'
-            params.append(start_date)
+            start_date_sql = convert_date_format(start_date)
+            if start_date_sql:
+                query += ' AND DATE(created_at) >= ?'
+                params.append(start_date_sql)
 
         if end_date:
-            query += ' AND DATE(created_at) <= DATE(?, "start of day")'
-            params.append(end_date)
+            end_date_sql = convert_date_format(end_date)
+            if end_date_sql:
+                query += ' AND DATE(created_at) <= ?'
+                params.append(end_date_sql)
 
         query += ' GROUP BY work_type ORDER BY order_count DESC'
 
@@ -136,13 +183,24 @@ class ReportService:
         conn = get_connection()
         cursor = conn.cursor()
 
+        start_date_sql = convert_date_format(start_date)
+        end_date_sql = convert_date_format(end_date)
+
+        if not start_date_sql or not end_date_sql:
+            return {
+                'total_orders': 0,
+                'total_quantity': 0,
+                'total_doctors': 0,
+                'total_technicians': 0
+            }
+
         cursor.execute('''
             SELECT COUNT(*), SUM(quantity), COUNT(DISTINCT doctor_id), COUNT(DISTINCT technician_id)
             FROM orders
             WHERE status = 'in_progress'
-            AND DATE(created_at) >= DATE(?, "start of day")
-            AND DATE(created_at) <= DATE(?, "start of day")
-        ''', (start_date, end_date))
+            AND DATE(created_at) >= ?
+            AND DATE(created_at) <= ?
+        ''', (start_date_sql, end_date_sql))
 
         row = cursor.fetchone()
         conn.close()
@@ -166,15 +224,24 @@ class ReportService:
             message += "❌ Нет данных за указанный период"
             return message
 
-        total_orders = sum(s['order_count'] for s in stats)
-        message += f"📋 Всего заказов: {total_orders}\n\n"
+        total_orders = 0
 
-        for i, stat in enumerate(stats, 1):
-            message += (
-                f"{i}. {stat['name']}\n"
-                f"   📦 Заказов: {stat['order_count']}\n"
-                f"   🔨 Виды работ: {stat['work_types'][:50]}{'...' if len(stat['work_types']) > 50 else ''}\n\n"
-            )
+        for doc in stats:
+            doc_orders = sum(wt['order_count'] for wt in doc['work_types'])
+            total_orders += doc_orders
+
+            message += f"👨‍⚕️ {doc['name']}\n"
+
+            if doc['work_types']:
+                message += "   Виды работ:\n"
+                for i, wt in enumerate(doc['work_types'], 1):
+                    message += f"   {i}. {wt['work_type']} ({wt['order_count']} заказ)\n"
+            else:
+                message += "   ❌ Нет работ\n"
+
+            message += "\n"
+
+        message += f"📋 Всего заказов: {total_orders}\n"
 
         return message
 
@@ -190,19 +257,28 @@ class ReportService:
             message += "❌ Нет данных за указанный период"
             return message
 
-        total_orders = sum(s['order_count'] for s in stats)
-        total_quantity = sum(s['total_quantity'] for s in stats)
+        total_orders = 0
+        total_quantity = 0
+
+        for tech in stats:
+            tech_orders = sum(wt['order_count'] for wt in tech['work_types'])
+            tech_quantity = sum(wt['total_quantity'] for wt in tech['work_types'])
+            total_orders += tech_orders
+            total_quantity += tech_quantity
+
+            message += f"👤 {tech['name']}\n"
+
+            if tech['work_types']:
+                message += "   Виды работ:\n"
+                for i, wt in enumerate(tech['work_types'], 1):
+                    message += f"   {i}. {wt['work_type']} ({wt['order_count']} заказ, {wt['total_quantity']} шт)\n"
+            else:
+                message += "   ❌ Нет работ\n"
+
+            message += "\n"
 
         message += f"📋 Всего заказов: {total_orders}\n"
-        message += f"📊 Всего единиц: {total_quantity}\n\n"
-
-        for i, stat in enumerate(stats, 1):
-            message += (
-                f"{i}. {stat['name']}\n"
-                f"   📦 Заказов: {stat['order_count']}\n"
-                f"   📊 Единиц: {stat['total_quantity']}\n"
-                f"   🔨 Виды работ: {stat['work_types'][:50]}{'...' if len(stat['work_types']) > 50 else ''}\n\n"
-            )
+        message += f"📊 Всего единиц: {total_quantity}\n"
 
         return message
 

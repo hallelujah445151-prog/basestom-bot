@@ -62,3 +62,7 @@ if errorlevel 1 (
     echo [ERROR] Bot stopped with error
     pause
 )
+
+echo.
+echo Bot stopped. Press any key to close...
+pause
