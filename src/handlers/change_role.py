@@ -13,7 +13,10 @@ async def change_role_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = UserManager.get_user_by_telegram_id(update.effective_user.id)
 
     if not user:
-        await update.message.reply_text('❌ Сначала зарегистрируйтесь через команду /register')
+        if update.callback_query:
+            await update.callback_query.edit_message_text('❌ Сначала зарегистрируйтесь через команду /register')
+        else:
+            await update.message.reply_text('❌ Сначала зарегистрируйтесь через команду /register')
         return
 
     current_role = user['role']
@@ -28,13 +31,22 @@ async def change_role_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text(
-        f'📋 Смена роли\n\n'
-        f'Текущая роль: {current_role}\n'
-        f'Имя: {current_name}\n\n'
-        f'Выберите новую роль:',
-        reply_markup=reply_markup
-    )
+    if update.callback_query:
+        await update.callback_query.edit_message_text(
+            f'📋 Смена роли\n\n'
+            f'Текущая роль: {current_role}\n'
+            f'Имя: {current_name}\n\n'
+            f'Выберите новую роль:',
+            reply_markup=reply_markup
+        )
+    else:
+        await update.message.reply_text(
+            f'📋 Смена роли\n\n'
+            f'Текущая роль: {current_role}\n'
+            f'Имя: {current_name}\n\n'
+            f'Выберите новую роль:',
+            reply_markup=reply_markup
+        )
 
 
 async def role_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -93,5 +105,5 @@ async def role_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 change_role_handler = CallbackQueryHandler(
     role_selected,
-    lambda c: c.data and c.data.startswith('role_dispatcher_') or c.data.startswith('role_technician_') or c.data.startswith('role_doctor_') or c.data.startswith('role_cancel_')
+    pattern='^role_(dispatcher|technician|doctor|cancel)_'
 )

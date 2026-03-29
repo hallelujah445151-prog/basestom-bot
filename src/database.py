@@ -16,6 +16,7 @@ def init_db():
             telegram_id INTEGER UNIQUE,
             name TEXT NOT NULL,
             role TEXT NOT NULL,
+            is_admin INTEGER DEFAULT 0,
             reference_id INTEGER,
             is_active INTEGER DEFAULT 1,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP

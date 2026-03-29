@@ -24,29 +24,19 @@ class ReminderBackgroundTask:
         """Проверка заказов и отправка напоминаний"""
         now = datetime.now()
         current_time = now.time()
-        current_date = now.date()
 
-        reminder_time = time(10, 0, 0)
+        reminder_start_time = time(9, 50, 0)
+        reminder_end_time = time(10, 30, 0)
 
-        if current_time < reminder_time:
+        if not (reminder_start_time <= current_time <= reminder_end_time):
             return
-
-        if self.last_check_date == current_date:
-            return
-
-        time_diff = (now.hour - 10) * 60 + now.minute
-        if time_diff > 10:
-            self.last_check_date = current_date
-            return
-
-        self.last_check_date = current_date
 
         orders_due_tomorrow = self.reminder_service.get_orders_due_tomorrow()
 
         if not orders_due_tomorrow:
             return
 
-        dispatchers = self.user_manager.get_users_by_role('dispatcher')
+        dispatchers = self.user_manager.get_all_admins()
 
         for order in orders_due_tomorrow:
             reminder_message = self.reminder_service.format_reminder_message(order)
