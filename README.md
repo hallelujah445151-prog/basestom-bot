@@ -60,16 +60,14 @@ OPENROUTER_API_KEY=ваш_ключ_от_OpenRouter
 
 Для постоянной работы бота используйте VPS с автозапуском через Supervisor.
 
-📖 **Подробная инструкция:** [VPS_DEPLOYMENT.md](VPS_DEPLOYMENT.md)
-
+⚡ **Быстрое развертывание:** [VPS_QUICK_DEPLOY.md](VPS_QUICK_DEPLOY.md)
+📖 **Подробная инструкция:** [VPS_DEPLOY_MANUAL.md](VPS_DEPLOY_MANUAL.md)
 📦 **Список файлов для деплоя:** [DEPLOYMENT_FILES.md](DEPLOYMENT_FILES.md)
 
 **Кратко:**
-1. Загрузите файлы на VPS
-2. Создайте виртуальное окружение и установите зависимости
-3. Настройте `.env` с токенами
-4. Настройте Supervisor для автозапуска
-5. Запустите бота через Supervisor
+1. Подключитесь к VPS: `ssh root@31.129.99.125`
+2. Скачайте и запустите скрипт: `bash install.sh`
+3. Проверьте бота в Telegram
 
 ## Запуск
 
