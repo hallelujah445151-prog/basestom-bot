@@ -13,9 +13,11 @@ class ReminderService:
 
     @staticmethod
     def get_orders_due_tomorrow():
-        """Получить заказы с дедлайном на завтра (по московскому времени)"""
+        """Получить заказы с дедлайном на сегодня (для напоминания)"""
         now_moscow = datetime.now(ZoneInfo('Europe/Moscow'))
-        tomorrow = (now_moscow + timedelta(days=1)).strftime('%d.%m.%Y')
+        today = now_moscow.replace(hour=0, minute=0, second=0, microsecond=0)
+        today_str = today.strftime('%d.%m.%Y')
+        print(f"[DEBUG] Today (Moscow): {today_str}")
 
         conn = get_connection()
         cursor = conn.cursor()
@@ -28,9 +30,9 @@ class ReminderService:
             LEFT JOIN users d ON o.doctor_id = d.id
             WHERE o.deadline = ? AND o.status = 'in_progress'
             AND NOT EXISTS (
-                SELECT 1 FROM reminders r WHERE r.order_id = o.id AND r.reminder_type = 'tomorrow'
+                SELECT 1 FROM reminders r WHERE r.order_id = o.id AND r.reminder_type = 'today'
             )
-        ''', (tomorrow,))
+        ''', (today_str,))
 
         rows = cursor.fetchall()
         conn.close()
@@ -108,7 +110,7 @@ class ReminderService:
         return message
 
     @staticmethod
-    def mark_reminder_sent(order_id: int, reminder_type: str = 'tomorrow'):
+    def mark_reminder_sent(order_id: int, reminder_type: str = 'today'):
         """Отметить напоминание как отправленное"""
         conn = get_connection()
         cursor = conn.cursor()
