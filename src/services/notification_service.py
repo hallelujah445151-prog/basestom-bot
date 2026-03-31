@@ -236,6 +236,7 @@ class NotificationService:
             f"⏰ НАПОМИНАНИЕ О СРОКЕ ВЫПОЛНЕНИЯ!\n\n"
             f"📋 Заказ №{order['id']}\n"
             f"👤 Пациент: {order.get('patient_name', 'Не указан')}\n"
+            f"👨‍⚕️ Врач: {order.get('doctor_name', 'Не указан')}\n"
             f"🔧 Техник: {technician_name}\n"
             f"🔨 Вид работы: {order.get('work_type', 'Не указано')}\n"
             f"📊 Количество: {order.get('quantity', 0)} шт\n"

@@ -18,10 +18,11 @@ class ReminderService:
         cursor = conn.cursor()
 
         cursor.execute('''
-            SELECT o.id, o.doctor_id, o.technician_id, t.name as technician_name,
+            SELECT o.id, o.doctor_id, o.technician_id, t.name as technician_name, d.name as doctor_name,
                    o.patient_name, o.work_type, o.quantity, o.deadline, o.description, o.photo_id
             FROM orders o
             LEFT JOIN users t ON o.technician_id = t.id
+            LEFT JOIN users d ON o.doctor_id = d.id
             WHERE o.deadline = ? AND o.status = 'in_progress'
             AND NOT EXISTS (
                 SELECT 1 FROM reminders r WHERE r.order_id = o.id AND r.reminder_type = 'tomorrow'
@@ -38,12 +39,13 @@ class ReminderService:
                 'doctor_id': row[1],
                 'technician_id': row[2],
                 'technician_name': row[3],
-                'patient_name': row[4],
-                'work_type': row[5],
-                'quantity': row[6],
-                'deadline': row[7],
-                'description': row[8],
-                'photo_id': row[9]
+                'doctor_name': row[4],
+                'patient_name': row[5],
+                'work_type': row[6],
+                'quantity': row[7],
+                'deadline': row[8],
+                'description': row[9],
+                'photo_id': row[10]
             })
 
         return orders
@@ -57,10 +59,11 @@ class ReminderService:
         cursor = conn.cursor()
 
         cursor.execute('''
-            SELECT o.id, o.doctor_id, o.technician_id, t.name as technician_name,
+            SELECT o.id, o.doctor_id, o.technician_id, t.name as technician_name, d.name as doctor_name,
                    o.patient_name, o.work_type, o.quantity, o.deadline, o.description, o.photo_id
             FROM orders o
             LEFT JOIN users t ON o.technician_id = t.id
+            LEFT JOIN users d ON o.doctor_id = d.id
             WHERE o.deadline = ? AND o.status = 'in_progress'
         ''', (today,))
 
@@ -74,12 +77,13 @@ class ReminderService:
                 'doctor_id': row[1],
                 'technician_id': row[2],
                 'technician_name': row[3],
-                'patient_name': row[4],
-                'work_type': row[5],
-                'quantity': row[6],
-                'deadline': row[7],
-                'description': row[8],
-                'photo_id': row[9]
+                'doctor_name': row[4],
+                'patient_name': row[5],
+                'work_type': row[6],
+                'quantity': row[7],
+                'deadline': row[8],
+                'description': row[9],
+                'photo_id': row[10]
             })
 
         return orders
@@ -91,6 +95,7 @@ class ReminderService:
             f"⏰ НАПОМИНАНИЕ О СРОКЕ ВЫПОЛНЕНИЯ!\n\n"
             f"📋 Заказ №{order['id']}\n"
             f"👤 Пациент: {order.get('patient_name', 'Не указан')}\n"
+            f"👨‍⚕️ Врач: {order.get('doctor_name', 'Не указан')}\n"
             f"🔨 Вид работы: {order.get('work_type', 'Не указано')}\n"
             f"📊 Количество: {order.get('quantity', 0)} шт\n"
             f"📅 Срок выполнения: {order.get('deadline', 'Не указан')}\n"
