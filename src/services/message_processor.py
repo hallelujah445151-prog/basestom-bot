@@ -88,7 +88,7 @@ class MessageProcessor:
         doctor_keywords = ['от', 'врач']
         for i, part in enumerate(parts):
             part_lower = part.lower()
-            if 'от' in part_lower:
+            if any(keyword in part_lower for keyword in doctor_keywords):
                 if i + 1 < len(parts):
                     result['doctor_name'] = parts[i+1].strip('.,;')
                 break
@@ -136,6 +136,9 @@ class MessageProcessor:
 
         Вход: "Козлов виниры 5шт от Иванова 15.02.2026 пациент Сидоров"
         Выход: {"technician_name": "Козлов", "work_type": "виниры", "quantity": 5, "deadline": "15.02.2026", "doctor_name": "Иванов", "patient_name": "Сидоров"}
+
+        Вход: "Плюхин металлокерамика 2 шт на 02.04.2026 врач Гаспарянидзе пациент Анохин"
+        Выход: {"technician_name": "Плюхин", "work_type": "металлокерамика", "quantity": 2, "deadline": "02.04.2026", "doctor_name": "Гаспарянидзе", "patient_name": "Анохин", "notes": ""}
         """
 
         try:
