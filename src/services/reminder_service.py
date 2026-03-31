@@ -28,50 +28,11 @@ class ReminderService:
             FROM orders o
             LEFT JOIN users t ON o.technician_id = t.id
             LEFT JOIN users d ON o.doctor_id = d.id
-            WHERE o.deadline = ? AND o.status = 'in_progress'
+            WHERE DATE(o.deadline) = ? AND o.status = 'in_progress'
             AND NOT EXISTS (
                 SELECT 1 FROM reminders r WHERE r.order_id = o.id AND r.reminder_type = 'today'
             )
-        ''', (today_str,))
-
-        rows = cursor.fetchall()
-        conn.close()
-
-        orders = []
-        for row in rows:
-            orders.append({
-                'id': row[0],
-                'doctor_id': row[1],
-                'technician_id': row[2],
-                'technician_name': row[3],
-                'doctor_name': row[4],
-                'patient_name': row[5],
-                'work_type': row[6],
-                'quantity': row[7],
-                'deadline': row[8],
-                'description': row[9],
-                'photo_id': row[10]
-            })
-
-        return orders
-
-    @staticmethod
-    def get_orders_due_today():
-        """Получить заказы с дедлайном сегодня (по московскому времени)"""
-        now_moscow = datetime.now(ZoneInfo('Europe/Moscow'))
-        today = now_moscow.strftime('%d.%m.%Y')
-
-        conn = get_connection()
-        cursor = conn.cursor()
-
-        cursor.execute('''
-            SELECT o.id, o.doctor_id, o.technician_id, t.name as technician_name, d.name as doctor_name,
-                   o.patient_name, o.work_type, o.quantity, o.deadline, o.description, o.photo_id
-            FROM orders o
-            LEFT JOIN users t ON o.technician_id = t.id
-            LEFT JOIN users d ON o.doctor_id = d.id
-            WHERE o.deadline = ? AND o.status = 'in_progress'
-        ''', (today,))
+        ''', (yesterday,))
 
         rows = cursor.fetchall()
         conn.close()
