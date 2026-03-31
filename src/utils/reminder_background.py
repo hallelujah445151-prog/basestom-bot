@@ -53,7 +53,7 @@ class ReminderBackgroundTask:
 
             await self.notification_service.send_reminder_to_technician(order, reminder_message)
 
-            technician_name = order.get('patient_name', 'Не указан')
+            technician_name = order.get('technician_name', 'Не указан')
 
             for dispatcher in dispatchers:
                 await self.notification_service.send_reminder_to_dispatcher(
