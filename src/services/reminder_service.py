@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import sqlite3
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from database import get_connection
 
 
@@ -11,8 +13,9 @@ class ReminderService:
 
     @staticmethod
     def get_orders_due_tomorrow():
-        """Получить заказы с дедлайном на завтра"""
-        tomorrow = (datetime.now() + timedelta(days=1)).strftime('%d.%m.%Y')
+        """Получить заказы с дедлайном на завтра (по московскому времени)"""
+        now_moscow = datetime.now(ZoneInfo('Europe/Moscow'))
+        tomorrow = (now_moscow + timedelta(days=1)).strftime('%d.%m.%Y')
 
         conn = get_connection()
         cursor = conn.cursor()
@@ -52,8 +55,9 @@ class ReminderService:
 
     @staticmethod
     def get_orders_due_today():
-        """Получить заказы с дедлайном сегодня"""
-        today = datetime.now().strftime('%d.%m.%Y')
+        """Получить заказы с дедлайном сегодня (по московскому времени)"""
+        now_moscow = datetime.now(ZoneInfo('Europe/Moscow'))
+        today = now_moscow.strftime('%d.%m.%Y')
 
         conn = get_connection()
         cursor = conn.cursor()
