@@ -35,19 +35,19 @@ class ReminderBackgroundTask:
         if not (reminder_start_time <= current_time <= reminder_end_time):
             return
 
-        print(f"[DEBUG] Time window matched! Checking for orders due tomorrow...")
+        print(f"[DEBUG] Time window matched! Checking for orders due today...")
 
-        orders_due_tomorrow = self.reminder_service.get_orders_due_tomorrow()
+        orders_due_today = self.reminder_service.get_orders_due_tomorrow()
 
-        if not orders_due_tomorrow:
-            print("[DEBUG] No orders due tomorrow")
+        if not orders_due_today:
+            print("[DEBUG] No orders due today")
             return
 
-        print(f"[DEBUG] Found {len(orders_due_tomorrow)} orders due tomorrow")
+        print(f"[DEBUG] Found {len(orders_due_today)} orders due today")
 
         dispatchers = self.user_manager.get_all_admins()
 
-        for order in orders_due_tomorrow:
+        for order in orders_due_today:
             print(f"[DEBUG] Processing order {order['id']} for {order.get('patient_name', 'Unknown')}")
             reminder_message = self.reminder_service.format_reminder_message(order)
 
@@ -62,7 +62,7 @@ class ReminderBackgroundTask:
                     technician_name
                 )
 
-            self.reminder_service.mark_reminder_sent(order['id'], 'tomorrow')
+            self.reminder_service.mark_reminder_sent(order['id'], 'today')
             print(f"[DEBUG] Reminder sent for order {order['id']}")
 
     async def start_background_task(self):
