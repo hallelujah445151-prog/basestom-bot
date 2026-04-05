@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 import sqlite3
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import get_connection
 
@@ -13,11 +13,11 @@ class ReminderService:
 
     @staticmethod
     def get_orders_due_tomorrow():
-        """Получить заказы с дедлайном на сегодня (для напоминания)"""
+        """Получить заказы с дедлайном на завтра (напоминание за 1 день до дедлайна)"""
         now_moscow = datetime.now(ZoneInfo('Europe/Moscow'))
-        today = now_moscow.replace(hour=0, minute=0, second=0, microsecond=0)
-        today_str = today.strftime('%d.%m.%Y')
-        print(f"[DEBUG] Today (Moscow): {today_str}")
+        today = now_moscow.strftime('%d.%m.%Y')
+        tomorrow = (now_moscow + timedelta(days=1)).strftime('%d.%m.%Y')
+        print(f"[DEBUG] Today: {today}, Tomorrow (for reminder): {tomorrow}")
 
         conn = get_connection()
         cursor = conn.cursor()
@@ -32,7 +32,7 @@ class ReminderService:
             AND NOT EXISTS (
                 SELECT 1 FROM reminders r WHERE r.order_id = o.id AND r.reminder_type = 'today'
             )
-        ''', (yesterday,))
+        ''', (tomorrow,))
 
         rows = cursor.fetchall()
         conn.close()
