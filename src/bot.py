@@ -1,9 +1,11 @@
 import os
 import sys
 import asyncio
+import logging
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
+from telegram.error import NetworkError, TimedOut
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from database import init_db
@@ -18,6 +20,13 @@ from utils.reminder_background import run_background_task
 load_dotenv()
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
+
+# Configure logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -142,7 +151,16 @@ async def admin_secret(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def main_async():
     init_db()
 
-    application = Application.builder().token(BOT_TOKEN).build()
+    # Create application once
+    application = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .connect_timeout(30)
+        .pool_timeout(30)
+        .read_timeout(30)
+        .write_timeout(30)
+        .build()
+    )
 
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('help', help_command))
@@ -159,32 +177,70 @@ async def main_async():
     application.add_handler(new_order_handler)
     application.add_handler(change_role_handler)
 
-    print('Bot started...')
-    print('Reminder background task enabled')
+    logger.info('Bot started...')
+    logger.info('Reminder background task enabled')
 
-    await application.initialize()
-    await application.start()
+    # Try to connect to Telegram with retry logic
+    retry_count = 0
+    max_retries = 5
 
+    while retry_count < max_retries:
+        try:
+            logger.info(f'Attempting to connect to Telegram (Attempt {retry_count + 1}/{max_retries})')
+            await application.initialize()
+            await application.start()
+            logger.info('Successfully connected to Telegram!')
+            break
+
+        except TimedOut as e:
+            logger.error(f'Timeout error: {e}')
+            if retry_count < max_retries - 1:
+                wait_time = min(30, 10 * (retry_count + 1))
+                logger.warning(f'Retrying in {wait_time} seconds... (Attempt {retry_count + 2}/{max_retries})')
+                logger.warning('Make sure VPN is enabled!')
+                await asyncio.sleep(wait_time)
+                retry_count += 1
+            else:
+                logger.error('Max retries reached. Giving up.')
+                raise
+
+        except NetworkError as e:
+            logger.error(f'Network error: {e}')
+            if retry_count < max_retries - 1:
+                wait_time = min(30, 10 * (retry_count + 1))
+                logger.warning(f'Retrying in {wait_time} seconds... (Attempt {retry_count + 2}/{max_retries})')
+                logger.warning('Make sure VPN is enabled!')
+                await asyncio.sleep(wait_time)
+                retry_count += 1
+            else:
+                logger.error('Max retries reached. Giving up.')
+                raise
+
+    # Start polling (no retry for polling)
     try:
         await application.updater.start_polling(
             timeout=180,
             drop_pending_updates=True,
             allowed_updates=['message', 'callback_query']
         )
+        logger.info('Polling started successfully!')
     except Exception as e:
-        print(f'Polling error: {e}')
-        print('Retrying in 5 seconds...')
-        await asyncio.sleep(5)
-        return await main_async()
+        logger.error(f'Failed to start polling: {e}')
+        raise
 
+    # Start background task
     background_task = asyncio.create_task(run_background_task(BOT_TOKEN))
 
-    while True:
-        try:
+    # Keep bot running
+    try:
+        while True:
             await asyncio.sleep(1)
-        except KeyboardInterrupt:
-            print('Bot stopped by user')
-            break
+    except KeyboardInterrupt:
+        logger.info('Bot stopped by user')
+        background_task.cancel()
+        await application.stop()
+        await application.shutdown()
+        return
 
 
 def main():

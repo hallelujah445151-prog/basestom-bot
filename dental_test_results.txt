@@ -1,0 +1,49 @@
+=== Тестирование стоматологической терминологии ===
+
+Тест {i}: {input_text}
+Ожидается: {expected}
+Результат: {result}
+Статус: {status}
+
+Тест {i}: {input_text}
+Ожидается: {expected}
+Результат: {result}
+Статус: {status}
+
+Тест {i}: {input_text}
+Ожидается: {expected}
+Результат: {result}
+Статус: {status}
+
+Тест {i}: {input_text}
+Ожидается: {expected}
+Результат: {result}
+Статус: {status}
+
+Тест {i}: {input_text}
+Ожидается: {expected}
+Результат: {result}
+Статус: {status}
+
+Тест {i}: {input_text}
+Ожидается: {expected}
+Результат: {result}
+Статус: {status}
+
+Тест {i}: {input_text}
+Ожидается: {expected}
+Результат: {result}
+Статус: {status}
+
+Тест {i}: {input_text}
+Ожидается: {expected}
+Результат: {result}
+Статус: {status}
+
+Тест {i}: {input_text}
+Ожидается: {expected}
+Результат: {result}
+Статус: {status}
+
+
+Итого: 3/9 пройдено

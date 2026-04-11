@@ -28,7 +28,7 @@ class ReminderService:
             FROM orders o
             LEFT JOIN users t ON o.technician_id = t.id
             LEFT JOIN users d ON o.doctor_id = d.id
-            WHERE DATE(o.deadline) = ? AND o.status = 'in_progress'
+            WHERE o.deadline = ? AND o.status = 'in_progress'
             AND NOT EXISTS (
                 SELECT 1 FROM reminders r WHERE r.order_id = o.id AND r.reminder_type = 'today'
             )
