@@ -173,10 +173,21 @@ async def admin_secret(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text('❌ Ошибка назначения администратора.')
 
 
+async def setup_menu_button(app):
+    try:
+        await app.bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(
+                text="Open",
+                web_app=WebAppInfo(url="https://stomapp-miniapp-1.onrender.com")
+            )
+        )
+        logger.info('Menu button set to Mini App')
+    except Exception as e:
+        logger.warning(f'Menu button failed: {e}')
+
+
 async def main_async():
     init_db()
-
-    # Create application once
     application = (
         Application.builder()
         .token(BOT_TOKEN)
@@ -184,6 +195,7 @@ async def main_async():
         .pool_timeout(30)
         .read_timeout(30)
         .write_timeout(30)
+        .post_init(setup_menu_button)
         .build()
     )
 
@@ -203,20 +215,6 @@ async def main_async():
         application.add_handler(handler)
     application.add_handler(new_order_handler)
     application.add_handler(change_role_handler)
-
-    async def post_init(app):
-        try:
-            await app.bot.set_chat_menu_button(
-                menu_button=MenuButtonWebApp(
-                    text="Открыть приложение",
-                    web_app=WebAppInfo(url="https://stomapp-miniapp-1.onrender.com")
-                )
-            )
-            logger.info('Menu button set')
-        except Exception as e:
-            logger.warning(f'Menu button error: {e}')
-
-    application.post_init = post_init
 
     logger.info('Bot started...')
     logger.info('Reminder background task enabled')
