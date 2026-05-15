@@ -3,7 +3,7 @@ import sys
 import asyncio
 import logging
 from dotenv import load_dotenv
-from telegram import Update
+from telegram import Update, MenuButtonWebApp, WebAppInfo
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from telegram.error import NetworkError, TimedOut
 
@@ -15,6 +15,7 @@ from handlers.admin import admin_menu, admin_menu_handler, get_admin_handler
 from handlers.orders import new_order_start, new_order_handler
 from handlers.reports import report_doctors, report_technicians, report_work_types, report_period_handler
 from handlers.change_role import change_role_start, change_role_handler
+from handlers.mini_app import open_mini_app, mini_app_info
 from utils.reminder_background import run_background_task
 
 load_dotenv()
@@ -36,17 +37,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = user_manager.get_user_by_telegram_id(update.effective_user.id)
 
         if user:
-            welcome_text = f'👋 Привет, {user["name"]}!\n\n'
+            welcome_text = f'Привет, {user["name"]}!\n\n'
         else:
-            welcome_text = '👋 Привет! Вы еще не зарегистрированы.\n\n'
+            welcome_text = 'Привет! Вы еще не зарегистрированы.\n\n'
 
-        welcome_text += '''📋 Доступные команды:
+        welcome_text += '''Доступные команды:
 
 /start - Начать работу
 /register - Регистрация в системе
 /help - Справка
+/app - Открыть мини-приложение
+/miniapp - Быстрый доступ к приложению
 
-💡 Если вы администратор:
+Если вы администратор:
 /neworder - Создать новый заказ
 /admin - Админ-панель управления пользователями
 /report_doctors - Отчет по врачам
@@ -54,9 +57,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 /report_work_types - Отчет по видам работ
 /report_period - Отчет за период
 
-💡 Для назначения администратора:
-/admin_secret СЕКРЕТНЫЙ_КОД
-'''
+Мини-приложение (StomApp):
+Современное веб-приложение для управления лабораторией
+Возможности:
+- Просмотр всех заказов
+- Создание новых заказов (3 простых шага)
+- Поиск и фильтрация
+- Редактирование статусов
+- Статистика и отчеты
+- Работает в Telegram без установки
+
+Для назначения администратора:
+  /admin_secret СЕКРЕТНЫЙ_КОД
+        '''
 
         await update.message.reply_text(welcome_text)
     except Exception as e:
@@ -64,19 +77,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await update.message.reply_text('Error! Please try /help command')
         except Exception as e2:
+            pass
             print(f"Error sending error message: {e2}")
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = '''
-📋 Доступные команды:
+Доступные команды:
 
-🔹 Общие:
+Общие:
 /start - Начать работу
 /register - Регистрация в системе
 /help - Эта справка
+/app - Открыть мини-приложение
+/miniapp - Быстрый доступ к приложению
 
-🔹 Для администратора:
+Для администратора:
 /neworder - Создать новый заказ
 /admin - Админ-панель управления пользователями
 /report_doctors - Отчет по врачам (все время)
@@ -84,27 +100,36 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 /report_work_types - Отчет по видам работ (все время)
 /report_period - Отчет за период
 
-💡 Создание заказа:
+Мини-приложение (StomApp):
+Современное веб-приложение для управления лабораторией
+
+Возможности:
+- Просмотр всех заказов
+- Создание новых заказов (3 простых шага)
+- Поиск и фильтрация
+- Редактирование статусов
+- Статистика и отчеты
+- Работает в Telegram без установки
+
+Создание заказа:
 Команда /neworder позволяет создать новый заказ.
 Сначала отправьте фото заказ-наряда, затем текст с назначением.
 Пример: "Мороков циркон на винте7шт"
-💡 Техник должен быть зарегистрирован в боте!
+Техник должен быть зарегистрирован в боте!
 
-💡 Отчеты:
+Отчеты:
 Команды /report_* позволяют просматривать статистику по заказам.
 Команда /report_period позволяет выбрать период для детального отчета.
 
-💡 Регистрация:
+Регистрация:
 Регистрация доступна для двух ролей: Техник и Врач.
 Администратор назначается отдельно через секретную команду.
 
-💡 Роли:
+Роли:
 Техник: получает уведомления о заказах и напоминания.
 Врач: получает уведомления о назначении заказов.
 Администратор: создает заказы, просматривает отчеты, управляет ботом.
 '''
-
-    await update.message.reply_text(help_text)
 
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -116,7 +141,7 @@ async def admin_secret(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from services.user_manager import UserManager
     import os
 
-    SECRET_CODE = os.getenv('ADMIN_SECRET_CODE', 'admin123')
+    SECRET_CODE = os.getenv('ADMIN_SECRET_CODE', 'endurance')
 
     if not context.args or len(context.args) == 0:
         await update.message.reply_text('❌ Укажите секретный код. Пример: /admin_secret СЕКРЕТНЫЙ_КОД')
@@ -140,9 +165,9 @@ async def admin_secret(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f'✅ {user["name"]}, вы назначены администратором!\n\n'
             'Теперь вы можете:\n'
-            '• Создавать заказы (/neworder)\n'
-            '• Просматривать отчеты (/report_*)\n'
-            '• Управлять ботом (/admin)'
+            '- Создавать заказы (/neworder)\n'
+            '- Просматривать отчеты (/report_*)\n'
+            '- Управлять ботом (/admin)'
         )
     else:
         await update.message.reply_text('❌ Ошибка назначения администратора.')
@@ -171,11 +196,25 @@ async def main_async():
     application.add_handler(CommandHandler('report_work_types', report_work_types))
     application.add_handler(report_period_handler)
     application.add_handler(CommandHandler('admin_secret', admin_secret))
+    application.add_handler(CommandHandler('app', mini_app_info))
+    application.add_handler(CommandHandler('miniapp', open_mini_app))
     application.add_handler(register_handler)
     for handler in get_admin_handler():
         application.add_handler(handler)
     application.add_handler(new_order_handler)
     application.add_handler(change_role_handler)
+
+    # Установка Menu Button — кнопка «Открыть» в общем списке чатов
+    try:
+        await application.bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(
+                text="Открыть приложение",
+                web_app=WebAppInfo(url="https://stomapp-miniapp-1.onrender.com")
+            )
+        )
+        logger.info('Menu button set to Mini App URL')
+    except Exception as e:
+        logger.warning(f'Could not set menu button: {e}')
 
     logger.info('Bot started...')
     logger.info('Reminder background task enabled')
