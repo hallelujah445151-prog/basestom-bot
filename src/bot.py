@@ -204,17 +204,19 @@ async def main_async():
     application.add_handler(new_order_handler)
     application.add_handler(change_role_handler)
 
-    # Установка Menu Button — кнопка «Открыть» в общем списке чатов
-    try:
-        await application.bot.set_chat_menu_button(
-            menu_button=MenuButtonWebApp(
-                text="Открыть приложение",
-                web_app=WebAppInfo(url="https://stomapp-miniapp-1.onrender.com")
+    async def post_init(app):
+        try:
+            await app.bot.set_chat_menu_button(
+                menu_button=MenuButtonWebApp(
+                    text="Открыть приложение",
+                    web_app=WebAppInfo(url="https://stomapp-miniapp-1.onrender.com")
+                )
             )
-        )
-        logger.info('Menu button set to Mini App URL')
-    except Exception as e:
-        logger.warning(f'Could not set menu button: {e}')
+            logger.info('Menu button set')
+        except Exception as e:
+            logger.warning(f'Menu button error: {e}')
+
+    application.post_init = post_init
 
     logger.info('Bot started...')
     logger.info('Reminder background task enabled')
