@@ -177,7 +177,7 @@ async def setup_menu_button(app):
     try:
         await app.bot.set_chat_menu_button(
             menu_button=MenuButtonWebApp(
-                text="Open",
+                text="Открыть",
                 web_app=WebAppInfo(url="https://stomapp-miniapp-1.onrender.com")
             )
         )
