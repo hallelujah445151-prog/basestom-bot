@@ -2,8 +2,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppI
 from telegram.ext import ContextTypes
 
 # URL Mini App
-MINI_APP_URL = "https://stomapp-backend.onrender.com"
-LOCAL_MINI_APP_URL = "https://stomapp-backend.onrender.com"
+MINI_APP_URL = "https://stomapp-miniapp-1.onrender.com"
+LOCAL_MINI_APP_URL = "https://stomapp-miniapp-1.onrender.com"
 
 async def open_mini_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Открытие Telegram Mini App"""
