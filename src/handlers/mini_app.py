@@ -7,25 +7,34 @@ LOCAL_MINI_APP_URL = "https://stomapp-miniapp-1.onrender.com"
 
 async def open_mini_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Открытие Telegram Mini App"""
-    web_app_url = LOCAL_MINI_APP_URL  # Для тестирования используйте локальный URL
+    web_app_url = LOCAL_MINI_APP_URL
     
-    keyboard = [[InlineKeyboardButton(
-        text="Открыть приложение",
-        web_app=WebAppInfo(url=web_app_url)
-    )]]
-    
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(
-        "Откройте мини-приложение для управления лабораторией!\n\n"
-        "В приложении вы можете:\n"
-        "• Просматривать свои заказы\n"
-        "• Создавать новые заказы\n"
-        "• Редактировать статусы\n"
-        "• Использовать поиск и фильтры\n\n"
-        "Приложение работает лучше в мобильной версии Telegram",
-        reply_markup=reply_markup
-    )
+    try:
+        keyboard = [[InlineKeyboardButton(
+            text="Открыть приложение",
+            web_app=WebAppInfo(url=web_app_url)
+        )]]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            "Откройте мини-приложение для управления лабораторией!\n\n"
+            "В приложении вы можете:\n"
+            "• Просматривать свои заказы\n"
+            "• Создавать новые заказы\n"
+            "• Редактировать статусы\n"
+            "• Использовать поиск и фильтры\n\n"
+            f"URL: {web_app_url}\n\n"
+            "Приложение работает лучше в мобильной версии Telegram",
+            reply_markup=reply_markup
+        )
+        print(f"[OK] Mini App button sent with URL: {web_app_url}")
+    except Exception as e:
+        print(f"[ERROR] Failed to send Mini App button: {e}")
+        await update.message.reply_text(
+            f"Ошибка при открытии приложения: {e}\n\n"
+            f"Попробуйте открыть в браузере:\n{web_app_url}"
+        )
 
 async def mini_app_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Информация о Mini App"""
