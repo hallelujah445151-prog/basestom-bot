@@ -3,7 +3,7 @@ from telegram.ext import ContextTypes
 
 # URL Mini App
 MINI_APP_URL = "https://stomapp-miniapp-1.onrender.com"
-LOCAL_MINI_APP_URL = "https://tired-squids-attend.loca.lt"
+LOCAL_MINI_APP_URL = "https://brave-horses-listen.loca.lt"
 
 async def open_mini_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Открытие Telegram Mini App"""
