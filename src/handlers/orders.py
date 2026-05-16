@@ -190,13 +190,28 @@ class OrderHandler:
                 processed_data.get('patient_name'),
                 processed_data.get('work_type'),
                 processed_data.get('quantity') if processed_data.get('quantity') is not None else 0,
-                processed_data.get('deadline'),
+                processed_data.get('deadline') if processed_data.get('deadline') is not None else '',
                 processed_data.get('description'),
                 photo_id
             ))
 
             order_id = cursor.lastrowid
             conn.commit()
+
+            # Синхронизация с Mini App
+            try:
+                import requests as sync_requests
+                sync_requests.post('https://stomapp-miniapp-1.onrender.com/api/sync/order-from-bot', json={
+                    'doctor_id': doctor_id, 'technician_id': technician_id,
+                    'patient_name': processed_data.get('patient_name'),
+                    'work_type': processed_data.get('work_type'),
+                    'quantity': processed_data.get('quantity') if processed_data.get('quantity') is not None else 1,
+                    'deadline': processed_data.get('deadline') if processed_data.get('deadline') is not None else '',
+                    'description': processed_data.get('description'),
+                    'status': 'in_progress'
+                }, timeout=5)
+            except Exception:
+                pass  # Mini App недоступен — продолжаем без синхронизации
 
             order_data = {
                 'id': order_id,
@@ -279,6 +294,20 @@ async def text_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     processor = MessageProcessor()
 
+    # Проверяем доступность ИИ
+    if not processor.is_ai_available():
+        await update.message.reply_text(
+            "⚠️ ИИ обработка текста недоступна.\n\n"
+            "Пожалуйста, используйте полный формат заказа:\n"
+            "Техник Фамилия И.О.\n"
+            "Пациент Фамилия И.О.\n"
+            "Вид работы: [описание]\n"
+            "Количество: X шт\n"
+            "Срок: ДД.ММ.ГГГГ\n\n"
+            "Или добавьте токен OpenRouter API в конфигурацию."
+        )
+        return ConversationHandler.END
+
     processed_data = processor.normalize_message(text)
     print(f"[DEBUG] Processed data: {processed_data}")
 
@@ -330,13 +359,27 @@ async def text_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
             processed_data.get('patient_name'),
             processed_data.get('work_type'),
             processed_data.get('quantity') if processed_data.get('quantity') is not None else 0,
-            processed_data.get('deadline'),
+            processed_data.get('deadline') if processed_data.get('deadline') is not None else '',
             text,
             photo_id
         ))
 
         order_id = cursor.lastrowid
         conn.commit()
+
+        # Синхронизация с Mini App
+        try:
+            import requests as sync_requests2
+            sync_requests2.post('https://stomapp-miniapp-1.onrender.com/api/sync/order-from-bot', json={
+                'doctor_id': doctor_id, 'technician_id': technician_id,
+                'patient_name': processed_data.get('patient_name'),
+                'work_type': processed_data.get('work_type'),
+                'quantity': processed_data.get('quantity') if processed_data.get('quantity') is not None else 1,
+                'deadline': processed_data.get('deadline') if processed_data.get('deadline') is not None else '',
+                'description': text, 'status': 'in_progress'
+            }, timeout=5)
+        except Exception:
+            pass
 
         order_data = {
             'id': order_id,
