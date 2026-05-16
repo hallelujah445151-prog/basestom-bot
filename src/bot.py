@@ -130,6 +130,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 Врач: получает уведомления о назначении заказов.
 Администратор: создает заказы, просматривает отчеты, управляет ботом.
 '''
+    await update.message.reply_text(help_text)
 
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
