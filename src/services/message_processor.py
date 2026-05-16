@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import httpx
 from openai import OpenAI
 
@@ -21,6 +22,7 @@ class MessageProcessor:
         if not api_key:
             print("WARNING: OPENROUTER_API_KEY not found, using simple parser only")
             self.client = None
+            self.ai_available = False
         else:
             try:
                 # Создаем кастомный httpx клиент без прокси
@@ -34,15 +36,24 @@ class MessageProcessor:
                     base_url="https://openrouter.ai/api/v1",
                     http_client=http_client
                 )
+                # Если API ключ есть, считаем ИИ доступным
+                # Ошибки будут обрабатываться при фактическом использовании
+                self.ai_available = True
                 print(f"[OpenAI] Client initialized successfully")
+                print(f"[OpenAI] API available: {self.ai_available}")
             except Exception as e:
                 print(f"ERROR: Failed to initialize OpenAI client: {e}")
                 print(f"Falling back to simple parser")
                 self.client = None
+                self.ai_available = False
 
         from services.dental_terminology_service import DentalTerminologyService
         self.dental_service = DentalTerminologyService()
         self.dental_cache = {}
+
+    def is_ai_available(self) -> bool:
+        """Проверяет доступен ли ИИ"""
+        return self.ai_available
 
     def parse_message_simple(self, text: str) -> dict:
         """Простой парсер сообщения без ИИ"""

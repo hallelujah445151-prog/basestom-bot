@@ -1,3 +1,18 @@
+# ГОТОВОЕ РЕШЕНИЕ ДЛЯ НАПОМИНАНИЙ
+
+## ТРЕБОВАНИЯ
+
+1. Отправлять напоминания в 10:00 для заказов с дедлайном завтра
+2. Если отправка не удалась → повторная попытка в 10:05
+3. Если снова не удалось → повторная попытка в 10:10
+4. Повторять каждые 5 минут до 10:30
+5. После 10:30 → проверки прекращаются, напоминания НЕ отправляются
+
+## ГОТОВОЕ РЕШЕНИЕ
+
+### Файл: src/utils/reminder_background.py
+
+```python
 import asyncio
 import os
 import sys
@@ -88,11 +103,11 @@ class ReminderBackgroundTask:
                 print(f"[DEBUG] Order {order['id']} - Reminder sent to technician")
             except Exception as e:
                 sent_tech = False
-                print(f"[DEBUG] Order {order['id']} - Failed to send to technician {e}")
+                print(f"[DEBUG] Order {order['id']} - Failed to send to technician: {e}")
 
-            # Отправляем администраторам (каждого отдельно и независимо)
+            # Отправляем администраторам
+            admin_success = True
             technician_name = order.get('technician_name', 'Не указан')
-            admins_sent = 0
 
             for admin in admins:
                 admin_message = (
@@ -107,20 +122,18 @@ class ReminderBackgroundTask:
                 )
                 try:
                     await self.bot.send_message(chat_id=admin['telegram_id'], text=admin_message)
-                    admins_sent += 1
-                    print(f"[DEBUG] Order {order['id']} - Admin {admin['name']} - REMINDER SENT")
                 except Exception as e:
-                    print(f"[DEBUG] Order {order['id']} - Failed to send to admin {admin['name']}: {e}")
+                    print(f"[DEBUG] Failed to send to admin {admin['name']}: {e}")
+                    admin_success = False
 
-            # Отмечаем напоминание как отправленное если ХОТЯ БЫ ОДИН из (техник или администраторы) получил
-            # Независимо от того, другим не удалось
-            if sent_tech or admins_sent > 0:
-                print(f"[DEBUG] Order {order['id']} - REMINDER SENT (technician: {sent_tech}, admins: {admins_sent}), marking as processed")
+            # Если отправка технику успешна → отмечаем напоминание как отправленное
+            if sent_tech:
+                print(f"[DEBUG] Order {order['id']} - REMINDER SENT, marking as processed")
                 self.reminder_service.mark_reminder_sent(order['id'], 'today')
                 sent_count += 1
                 fully_sent_orders += 1
             else:
-                print(f"[DEBUG] Order {order['id']} - FAILED (technician: {sent_tech}, admins: {admins_sent}), will retry")
+                print(f"[DEBUG] Order {order['id']} - FAILED, will retry")
                 failed_orders.append(order['id'])
 
         print(f"[DEBUG] Total technician reminders sent: {sent_count}")
@@ -130,6 +143,7 @@ class ReminderBackgroundTask:
         # Если ВСЕ заказы успешно отправлены → можно прекратить проверки для сегодняшнего дня
         if fully_sent_orders == len(orders_due_tomorrow):
             print(f"[DEBUG] All orders successfully sent, marking day as checked")
+            # НЕ обновляем last_check_date, чтобы завтра отправка была в 10:00
 
     async def start_background_task(self):
         """Запуск фонового процесса"""
@@ -155,3 +169,4 @@ async def run_background_task(bot_token: str):
     """Запуск фоновой задачи"""
     task = ReminderBackgroundTask(bot_token)
     await task.start_background_task()
+```
