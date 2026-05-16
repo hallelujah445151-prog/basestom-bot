@@ -8,7 +8,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from telegram.error import NetworkError, TimedOut
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from database import init_db
+from database import init_db, get_connection
 from services.message_processor import MessageProcessor
 from handlers.registration import register_handler
 from handlers.admin import admin_menu, admin_menu_handler, get_admin_handler
@@ -210,11 +210,29 @@ async def main_async():
     application.add_handler(CommandHandler('admin_secret', admin_secret))
     application.add_handler(CommandHandler('app', mini_app_info))
     application.add_handler(CommandHandler('miniapp', open_mini_app))
+    application.add_handler(CommandHandler('personnel', open_mini_app))
     application.add_handler(register_handler)
     for handler in get_admin_handler():
         application.add_handler(handler)
     application.add_handler(new_order_handler)
     application.add_handler(change_role_handler)
+
+    # Синхронизация БД с Render при старте бота
+    try:
+        import requests as db_sync
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, telegram_id, name, role, is_admin, is_active FROM users")
+        users = [{"id":r[0],"telegram_id":r[1],"name":r[2],"role":r[3],"is_admin":r[4],"is_active":r[5]} for r in cursor.fetchall()]
+        cursor.execute("SELECT * FROM orders")
+        orders = [{"id":r[0],"doctor_id":r[1],"technician_id":r[2],"patient_name":r[3],"work_type":r[4],"quantity":r[5],"deadline":r[6],"description":r[7],"photo_id":r[8],"created_at":r[9],"status":r[10]} for r in cursor.fetchall()]
+        conn.close()
+        db_sync.post('https://stomapp-miniapp-1.onrender.com/api/sync/restore-from-bot', json={
+            'secret': 'endurance', 'users': users, 'orders': orders
+        }, timeout=15)
+        logger.info(f'DB synced to Render: {len(users)} users, {len(orders)} orders')
+    except Exception as e:
+        logger.warning(f'DB sync to Render failed: {e}')
 
     logger.info('Bot started...')
     logger.info('Reminder background task enabled')
