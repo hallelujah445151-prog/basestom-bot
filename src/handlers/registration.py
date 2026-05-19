@@ -52,9 +52,17 @@ async def role_selected(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def name_entered(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработка введенного имени"""
-    name = update.message.text
+    name = update.message.text.strip()
     role = context.user_data.get('role')
-
+    
+    words = name.split()
+    if len(words) < 3:
+        await update.message.reply_text(
+            '❌ Введите полное ФИО (Фамилия Имя Отчество).\n'
+            'Должно быть минимум 3 слова.'
+        )
+        return ENTERING_NAME
+    
     success = UserManager.register_user(
         telegram_id=update.effective_user.id,
         name=name,
