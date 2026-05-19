@@ -58,8 +58,7 @@ async def name_entered(update: Update, context: ContextTypes.DEFAULT_TYPE):
     words = name.split()
     if len(words) < 3:
         await update.message.reply_text(
-            '❌ Введите полное ФИО (Фамилия Имя Отчество).\n'
-            'Должно быть минимум 3 слова.'
+            '❌ Введите полное ФИО (Фамилия Имя Отчество).'
         )
         return ENTERING_NAME
     
