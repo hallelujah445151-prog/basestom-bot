@@ -18,7 +18,9 @@ from handlers.change_role import change_role_start, change_role_handler
 from handlers.mini_app import open_mini_app, mini_app_info
 from utils.reminder_background import run_background_task
 
-load_dotenv()
+# Абсолютный путь к .env
+env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+load_dotenv(env_path)
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
