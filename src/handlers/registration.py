@@ -65,7 +65,8 @@ async def name_entered(update: Update, context: ContextTypes.DEFAULT_TYPE):
     success = UserManager.register_user(
         telegram_id=update.effective_user.id,
         name=name,
-        role=role
+        role=role,
+        is_active=0  # ожидает одобрения админом
     )
 
     if success:
@@ -73,6 +74,7 @@ async def name_entered(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f'🎉 Регистрация завершена!\n\n'
             f'👤 Имя: {name}\n'
             f'🔹 Роль: {role}\n\n'
+            f'⏳ Ожидайте подтверждения администратором.\n'
             f'Используйте /help для просмотра доступных команд'
         )
     else:

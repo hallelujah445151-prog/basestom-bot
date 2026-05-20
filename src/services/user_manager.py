@@ -11,16 +11,16 @@ class UserManager:
     """Управление пользователями"""
 
     @staticmethod
-    def register_user(telegram_id: int, name: str, role: str, is_admin: bool = False, reference_id: int = None) -> bool:
+    def register_user(telegram_id: int, name: str, role: str, is_admin: bool = False, reference_id: int = None, is_active: int = 1) -> bool:
         """Регистрация нового пользователя"""
         conn = get_connection()
         cursor = conn.cursor()
 
         try:
             cursor.execute('''
-                INSERT INTO users (telegram_id, name, role, is_admin, reference_id)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (telegram_id, name, role, 1 if is_admin else 0, reference_id))
+                INSERT INTO users (telegram_id, name, role, is_admin, reference_id, is_active)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (telegram_id, name, role, 1 if is_admin else 0, reference_id, is_active))
             conn.commit()
             return True
         except sqlite3.IntegrityError:
