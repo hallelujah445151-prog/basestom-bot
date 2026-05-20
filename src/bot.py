@@ -20,7 +20,7 @@ from utils.reminder_background import run_background_task
 
 # Абсолютный путь к .env
 env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
-load_dotenv(env_path)
+load_dotenv(env_path, override=True)
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
