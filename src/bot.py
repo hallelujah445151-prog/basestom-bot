@@ -229,7 +229,7 @@ async def main_async():
         orders = [{"id":r[0],"doctor_id":r[1],"technician_id":r[2],"patient_name":r[3],"work_type":r[4],"quantity":r[5],"deadline":r[6],"description":r[7],"photo_id":r[8],"created_at":r[9],"status":r[10]} for r in cursor.fetchall()]
         conn.close()
         db_sync.post('https://stomapp-miniapp-1.onrender.com/api/sync/restore-from-bot', json={
-            'secret': 'endurance', 'users': users, 'orders': orders
+            'secret': os.getenv('ADMIN_SECRET_CODE', 'endurance'), 'users': users, 'orders': orders
         }, timeout=15)
         logger.info(f'DB synced to Render: {len(users)} users, {len(orders)} orders')
     except Exception as e:
